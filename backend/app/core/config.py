@@ -1,0 +1,42 @@
+"""Application configuration loaded from environment variables."""
+
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+
+
+class Settings(BaseSettings):
+    # ── App ───────────────────────────────────────────────────
+    APP_NAME: str = "ORBITA"
+    APP_VERSION: str = "0.1.0"
+    APP_DESCRIPTION: str = (
+        "Orbital Registry for Big Data, Intelligence, and Traffic Analysis"
+    )
+    ENVIRONMENT: str = "development"
+    DEBUG: bool = True
+
+    # ── Database ──────────────────────────────────────────────
+    DATABASE_URL: str = "postgresql+asyncpg://orbita_admin:orbita_secret_2026@localhost:5432/orbita_registry"
+    DATABASE_URL_SYNC: str = "postgresql+psycopg2://orbita_admin:orbita_secret_2026@localhost:5432/orbita_registry"
+    DB_ECHO: bool = False
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 10
+
+    # ── Redis ─────────────────────────────────────────────────
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    # ── External APIs ─────────────────────────────────────────
+    SPACETRACK_USERNAME: str = ""
+    SPACETRACK_PASSWORD: str = ""
+    SPACETRACK_BASE_URL: str = "https://www.space-track.org"
+
+    # ── CORS ──────────────────────────────────────────────────
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

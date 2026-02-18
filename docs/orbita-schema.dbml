@@ -1,0 +1,166 @@
+// ORBITA — Relational Schema (dbdiagram.io)
+// Paste this into https://dbdiagram.io/d
+
+Table SpaceObject {
+  object_id bigserial [pk, note: 'Auto-generated ID']
+  norad_id integer [unique, note: 'NORAD catalog number']
+  cospar_id varchar(20) [unique, note: 'International designator']
+  name varchar(200) [not null]
+  object_type varchar(50) [not null, note: 'SATELLITE, DEBRIS, ROCKET_BODY, UNKNOWN']
+  launch_date date
+  decay_date date
+  launch_site varchar(150)
+  country_code char(3)
+  operator varchar(200)
+  owner varchar(200)
+  mass_kg numeric(12,2)
+  cross_section_m2 numeric(10,4)
+  orbit_class varchar(50) [note: 'LEO, MEO, GEO, HEO, SSO']
+  status varchar(50) [default: 'UNKNOWN']
+  purpose varchar(200)
+  metadata jsonb [default: '{}']
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+}
+
+Table Mission {
+  mission_id bigserial [pk]
+  name varchar(200) [not null]
+  description text
+  operator varchar(200)
+  launch_date date
+  end_date date
+  status varchar(50) [default: 'PLANNED']
+  metadata jsonb [default: '{}']
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+}
+
+Table MissionObject {
+  mission_id bigint [pk]
+  object_id bigint [pk]
+  role varchar(50) [default: 'PRIMARY']
+}
+
+Table OrbitState {
+  state_id bigserial [pk]
+  epoch timestamptz [pk, not null]
+  object_id bigint [not null]
+  position_x_km double
+  position_y_km double
+  position_z_km double
+  velocity_x_km_s double
+  velocity_y_km_s double
+  velocity_z_km_s double
+  reference_frame varchar(10) [default: 'TEME']
+  position_geom geometry [note: 'Derived via trigger']
+  semimajor_axis_km double
+  eccentricity double
+  inclination_deg double
+  raan_deg double
+  arg_perigee_deg double
+  true_anomaly_deg double
+  mean_anomaly_deg double
+  mean_motion_rev_day double
+  period_minutes double
+  apoapsis_km double [note: 'Derived via trigger']
+  periapsis_km double [note: 'Derived via trigger']
+  tle_line1 text
+  tle_line2 text
+  covariance_matrix jsonb
+  source varchar(30) [default: 'TLE']
+  created_at timestamptz [default: `now()`]
+}
+
+Table GroundStation {
+  station_id serial [pk]
+  name varchar(200) [not null]
+  location geometry [not null, note: 'PointZ WGS84']
+  country_code char(3)
+  operator varchar(200)
+  station_type varchar(50) [note: 'RADAR, OPTICAL, LASER, COMMS']
+  frequency_bands jsonb [default: '[]']
+  antenna_diameter_m numeric(6,2)
+  min_elevation_deg numeric(5,2) [default: 5.0]
+  capabilities jsonb [default: '{}']
+  is_active boolean [default: true]
+  created_at timestamptz [default: `now()`]
+}
+
+Table SatelliteTelemetry {
+  telemetry_id bigserial [pk]
+  ts timestamptz [pk, not null]
+  object_id bigint [not null]
+  subsystem varchar(50) [not null, note: 'EPS, ADCS, COMMS, THERMAL']
+  parameter_name varchar(120) [not null]
+  value double
+  unit varchar(30)
+  quality varchar(20) [default: 'NOMINAL']
+  raw_data jsonb
+}
+
+Table ConjunctionEvent {
+  conjunction_id bigserial [pk]
+  primary_object_id bigint [not null]
+  secondary_object_id bigint [not null]
+  time_of_closest_approach timestamptz [not null]
+  miss_distance_km double
+  miss_distance_radial_km double
+  miss_distance_in_track_km double
+  miss_distance_cross_track_km double
+  collision_probability double
+  relative_velocity_km_s double
+  combined_hard_body_radius_m double
+  covariance_primary jsonb
+  covariance_secondary jsonb
+  cdm_id varchar(100)
+  cdm_data jsonb
+  risk_level varchar(20) [default: 'LOW']
+  status varchar(30) [default: 'PENDING']
+  recommended_action text
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+}
+
+Table SpaceWeather {
+  weather_id bigserial [pk]
+  ts timestamptz [pk, not null]
+  solar_flux_f10_7 double
+  kp_index double
+  ap_index integer
+  dst_index integer
+  bz_gsm_nt double
+  proton_density_cm3 double
+  solar_wind_speed_km_s double
+  proton_flux double
+  electron_flux double
+  geomagnetic_storm_level varchar(10)
+  solar_flare_class varchar(10)
+  data_source varchar(60)
+  is_forecast boolean [default: false]
+  created_at timestamptz [default: `now()`]
+}
+
+Table ManeuverLog {
+  maneuver_id bigserial [pk]
+  object_id bigint [not null]
+  conjunction_id bigint
+  planned_time timestamptz [not null]
+  executed_time timestamptz
+  delta_v_m_s double
+  direction jsonb
+  status varchar(30) [default: 'PLANNED']
+  notes text
+  created_at timestamptz [default: `now()`]
+}
+
+// ── Relationships ──
+
+Ref: MissionObject.mission_id > Mission.mission_id
+Ref: MissionObject.object_id > SpaceObject.object_id
+Ref: OrbitState.object_id > SpaceObject.object_id
+Ref: SatelliteTelemetry.object_id > SpaceObject.object_id
+Ref: ConjunctionEvent.primary_object_id > SpaceObject.object_id
+Ref: ConjunctionEvent.secondary_object_id > SpaceObject.object_id
+Ref: ManeuverLog.object_id > SpaceObject.object_id
+Ref: ManeuverLog.conjunction_id > ConjunctionEvent.conjunction_id

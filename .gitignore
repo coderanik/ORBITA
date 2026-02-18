@@ -1,0 +1,32 @@
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# ── Environment ──────────────────────────────────────────────
+.env
+
+# ── IDE ──────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# ── Docker volumes ───────────────────────────────────────────
+postgres_data/
+redis_data/
+
+# ── Node / Frontend ─────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/build/
+
+# ── Misc ─────────────────────────────────────────────────────
+*.log
+*.bak

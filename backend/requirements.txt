@@ -1,0 +1,30 @@
+# ── Web Framework ─────────────────────────────────────────────
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# ── Database ──────────────────────────────────────────────────
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+psycopg2-binary==2.9.10
+alembic==1.14.1
+geoalchemy2==0.17.1
+
+# ── Validation & Settings ────────────────────────────────────
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# ── Redis / Caching ──────────────────────────────────────────
+redis==5.2.1
+
+# ── Orbit Propagation ────────────────────────────────────────
+skyfield==1.49
+sgp4==2.23
+numpy==2.2.1
+
+# ── HTTP Client (for external data sources) ──────────────────
+httpx==0.28.1
+
+# ── Utilities ─────────────────────────────────────────────────
+python-dateutil==2.9.0
+orjson==3.10.13
