@@ -6,10 +6,11 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # ── App ───────────────────────────────────────────────────
-    APP_NAME: str = "ORBITA"
-    APP_VERSION: str = "0.1.0"
+    APP_NAME: str = "ORBITA-ATSAD"
+    APP_VERSION: str = "0.2.0"
     APP_DESCRIPTION: str = (
-        "Orbital Registry for Big Data, Intelligence, and Traffic Analysis"
+        "Integrated Platform for Benchmarking and Operational Deployment "
+        "of LLM-Based Anomaly Detection in Spacecraft Telemetry"
     )
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
