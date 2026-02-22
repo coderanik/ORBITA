@@ -16,6 +16,13 @@ from app.models.reentry_event import ReentryEvent
 from app.models.anomaly_alert import AnomalyAlert
 from app.models.debris_classification import DebrisClassification
 from app.models.congestion_report import CongestionReport
+from app.models.benchmark import (
+    BenchmarkDataset,
+    BenchmarkModel,
+    BenchmarkRun,
+    BenchmarkResult,
+    DetectionEvent,
+)
 
 __all__ = [
     "Operator",
@@ -37,4 +44,9 @@ __all__ = [
     "AnomalyAlert",
     "DebrisClassification",
     "CongestionReport",
+    "BenchmarkDataset",
+    "BenchmarkModel",
+    "BenchmarkRun",
+    "BenchmarkResult",
+    "DetectionEvent",
 ]

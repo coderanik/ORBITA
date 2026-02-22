@@ -1,6 +1,9 @@
 """
-ORBITA - Orbital Registry for Big Data, Intelligence, and Traffic Analysis
-==========================================================================
+ORBITA-ATSAD — Orbital Registry for Big Data, Intelligence, and Traffic Analysis
+================================================================================
+Integrated Platform for Benchmarking and Operational Deployment of
+LLM-Based Anomaly Detection in Spacecraft Telemetry.
+
 FastAPI application entry point.
 """
 
@@ -17,6 +20,22 @@ from app.api.routes import (
     ground_stations,
     space_weather,
     stats,
+    # ── Phase 2: Complete catalog & analytics routes ──
+    operators,
+    launch_vehicles,
+    launches,
+    missions,
+    observations,
+    propagations,
+    maneuvers,
+    breakup_events,
+    reentry_events,
+    # ── ML & Anomaly Detection routes ──
+    anomaly_alerts,
+    debris_classifications,
+    congestion_reports,
+    # ── ATSAD Benchmark ──
+    benchmark,
 )
 
 settings = get_settings()
@@ -26,11 +45,11 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Startup / shutdown hooks."""
     # ── startup ──
-    print(f"  ORBITA v{settings.APP_VERSION} starting ({settings.ENVIRONMENT})")
+    print(f"  ORBITA-ATSAD v{settings.APP_VERSION} starting ({settings.ENVIRONMENT})")
     print(f"  Database: {settings.DATABASE_URL[:50]}...")
     yield
     # ── shutdown ──
-    print("  ORBITA shutting down")
+    print("  ORBITA-ATSAD shutting down")
 
 
 app = FastAPI(
@@ -54,13 +73,39 @@ app.add_middleware(
 # ── Routes ────────────────────────────────────────────────────
 API_V1 = "/api/v1"
 
-app.include_router(space_objects.router, prefix=API_V1)
-app.include_router(orbits.router,        prefix=API_V1)
-app.include_router(telemetry.router,     prefix=API_V1)
-app.include_router(conjunctions.router,  prefix=API_V1)
-app.include_router(ground_stations.router, prefix=API_V1)
-app.include_router(space_weather.router, prefix=API_V1)
-app.include_router(stats.router,         prefix=API_V1)
+# Core catalog
+app.include_router(space_objects.router,     prefix=API_V1)
+app.include_router(operators.router,         prefix=API_V1)
+app.include_router(launch_vehicles.router,   prefix=API_V1)
+app.include_router(launches.router,          prefix=API_V1)
+app.include_router(missions.router,          prefix=API_V1)
+
+# Tracking & orbit
+app.include_router(orbits.router,            prefix=API_V1)
+app.include_router(observations.router,      prefix=API_V1)
+app.include_router(propagations.router,      prefix=API_V1)
+app.include_router(ground_stations.router,   prefix=API_V1)
+
+# Telemetry
+app.include_router(telemetry.router,         prefix=API_V1)
+
+# Analytics
+app.include_router(conjunctions.router,      prefix=API_V1)
+app.include_router(maneuvers.router,         prefix=API_V1)
+app.include_router(breakup_events.router,    prefix=API_V1)
+app.include_router(reentry_events.router,    prefix=API_V1)
+app.include_router(space_weather.router,     prefix=API_V1)
+
+# ML & Anomaly Detection
+app.include_router(anomaly_alerts.router,    prefix=API_V1)
+app.include_router(debris_classifications.router, prefix=API_V1)
+app.include_router(congestion_reports.router, prefix=API_V1)
+
+# ATSAD Benchmark
+app.include_router(benchmark.router,         prefix=API_V1)
+
+# Dashboard
+app.include_router(stats.router,             prefix=API_V1)
 
 
 @app.get("/", tags=["Health"])
@@ -71,6 +116,7 @@ async def root():
         "description": settings.APP_DESCRIPTION,
         "status": "operational",
         "docs": "/docs",
+        "benchmark": "/api/v1/atsad",
     }
 
 
