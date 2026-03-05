@@ -36,6 +36,7 @@ from app.api.routes import (
     congestion_reports,
     # ── ATSAD Benchmark ──
     benchmark,
+    graphs,
 )
 
 settings = get_settings()
@@ -106,6 +107,7 @@ app.include_router(benchmark.router,         prefix=API_V1)
 
 # Dashboard
 app.include_router(stats.router,             prefix=API_V1)
+app.include_router(graphs.router,            prefix=API_V1)
 
 
 @app.get("/", tags=["Health"])
