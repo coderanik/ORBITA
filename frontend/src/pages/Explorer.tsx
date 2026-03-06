@@ -4,10 +4,11 @@ import Header from '../components/Header'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 
+// System endpoints mapped for Explorer
 const EXPLORER_TABS = [
   { id: 'space-objects', label: 'Space Catalog', icon: Satellite, endpoint: '/space-objects/' },
   { id: 'conjunctions', label: 'Conjunctions', icon: GitMerge, endpoint: '/conjunctions/' },
-  { id: 'telemetry', label: 'Raw Telemetry', icon: Zap, endpoint: '/telemetry/' },
+  { id: 'telemetry', label: 'Satellite-4 Telemetry', icon: Zap, endpoint: '/telemetry/4' },
   { id: 'observations', label: 'Observations', icon: Binoculars, endpoint: '/observations/' },
   { id: 'maneuvers', label: 'Maneuver Logs', icon: Flame, endpoint: '/maneuvers/' },
   { id: 'reentry', label: 'Reentry Events', icon: Droplet, endpoint: '/reentry-events/' },
