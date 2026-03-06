@@ -5,9 +5,10 @@ import { getGraphUrl } from '../api/orbita'
 interface SidebarProps {
   anomalies: AnomalyAlert[];
   stats: PlatformStats | null;
+  realPositions: Record<string, {name: string, lat: number, lon: number, alt: number}>;
 }
 
-export default function Sidebar({ anomalies, stats }: SidebarProps) {
+export default function Sidebar({ anomalies, stats, realPositions }: SidebarProps) {
   return (
     <div className="w-[450px] shrink-0 border-r border-white/10 bg-slate-950/80 backdrop-blur flex flex-col z-10 p-5 gap-6 overflow-y-auto custom-scrollbar">
       
@@ -41,22 +42,25 @@ export default function Sidebar({ anomalies, stats }: SidebarProps) {
         </h2>
         
         <div className="flex flex-col gap-3">
-          {anomalies.slice(0, 3).map((a) => (
-            <div key={a.alert_id} className={`p-3 rounded-lg border ${a.severity === 'CRITICAL' || a.severity === 'RED' ? 'border-red-500/30 bg-red-500/10' : 'border-amber-500/30 bg-amber-500/10'}`}>
-              <div className="flex items-start gap-3">
-                <AlertTriangle className={`w-4 h-4 mt-0.5 ${a.severity === 'CRITICAL' || a.severity === 'RED' ? 'text-red-500' : 'text-amber-500'}`} />
-                <div className="flex-1">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className={`text-xs font-bold ${a.severity === 'CRITICAL' || a.severity === 'RED' ? 'text-red-400' : 'text-amber-400'}`}>{a.severity}</span>
-                    <span className="text-[10px] text-slate-500 opacity-80">{new Date(a.detected_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                  </div>
-                  <div className="text-xs text-slate-300">
-                    SAT-{a.object_id} | Subsystem: {a.subsystem}
+          {anomalies.map((a) => {
+            const satName = realPositions[a.object_id.toString()]?.name || `SAT-${a.object_id}`;
+            return (
+              <div key={a.alert_id} className={`p-3 rounded-lg border ${a.severity === 'CRITICAL' || a.severity === 'RED' ? 'border-red-500/30 bg-red-500/10' : 'border-amber-500/30 bg-amber-500/10'}`}>
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className={`w-4 h-4 mt-0.5 ${a.severity === 'CRITICAL' || a.severity === 'RED' ? 'text-red-500' : 'text-amber-500'}`} />
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className={`text-xs font-bold ${a.severity === 'CRITICAL' || a.severity === 'RED' ? 'text-red-400' : 'text-amber-400'}`}>{a.severity}</span>
+                      <span className="text-[10px] text-slate-500 opacity-80">{new Date(a.detected_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <div className="text-xs text-slate-300">
+                      {satName} | Subsystem: {a.subsystem}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {anomalies.length === 0 && (
              <div className="p-3 text-center text-xs text-slate-500 border border-slate-800 rounded-lg">No unacknowledged anomalies actively detected.</div>
           )}

@@ -9,20 +9,10 @@ if (import.meta.env.VITE_CESIUM_ION_TOKEN) {
 
 interface GlobeViewProps {
   anomalies: AnomalyAlert[];
+  realPositions: Record<string, {name: string, lat: number, lon: number, alt: number}>;
 }
 
-// Pseudo-random deterministic placement generator
-const getStableCoord = (id: number) => {
-  const seed1 = Math.abs(Math.sin(id)) * 10000;
-  const seed2 = Math.abs(Math.cos(id)) * 10000;
-  return {
-    lat: (seed1 - Math.floor(seed1)) * 180 - 90,
-    lon: (seed2 - Math.floor(seed2)) * 360 - 180,
-    alt: 400000 + ((seed1 + seed2) - Math.floor(seed1 + seed2)) * 600000
-  }
-}
-
-export default function GlobeView({ anomalies }: GlobeViewProps) {
+export default function GlobeView({ anomalies, realPositions }: GlobeViewProps) {
   return (
     <div className="flex-1 bg-black relative">
       <Viewer 
@@ -36,12 +26,18 @@ export default function GlobeView({ anomalies }: GlobeViewProps) {
         navigationHelpButton={false}
       >
         {anomalies.map(a => {
-          const { lat, lon, alt } = getStableCoord(a.object_id);
+          // If python backend has live position for this ID, use it. Otherwise 0,0,0
+          const pos = realPositions[a.object_id.toString()];
+          const lat = pos ? pos.lat : 0;
+          const lon = pos ? pos.lon : 0;
+          const alt = pos ? pos.alt : 400000;
+          const satName = pos ? pos.name : `SAT-${a.object_id}`;
+          
           const isCrit = a.severity === 'CRITICAL' || a.severity === 'RED';
           return (
             <Entity
               key={a.alert_id}
-              name={`Anomaly on SAT-${a.object_id}`}
+              name={`Anomaly on ${satName}`}
               position={Cartesian3.fromDegrees(lon, lat, alt)}
               description={`Anomaly type: ${a.anomaly_type}<br/>Subsystem: ${a.subsystem}<br/>Severity: ${a.severity}`}
               point={{ 
