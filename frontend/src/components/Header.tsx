@@ -1,12 +1,31 @@
-import { Activity } from 'lucide-react'
+import { Activity, Database, Radar } from 'lucide-react'
+import { NavLink } from 'react-router-dom'
 
 export default function Header() {
   return (
     <header className="h-16 shrink-0 border-b border-white/10 flex items-center px-6 justify-between bg-white/5 backdrop-blur-md z-10">
-      <div className="flex items-center gap-3">
-        <Activity className="text-blue-500 w-6 h-6" />
-        <h1 className="text-xl font-bold tracking-widest text-white">ORBITA<span className="text-blue-500 font-light">ATSAD</span></h1>
+      <div className="flex items-center gap-10">
+        <div className="flex items-center gap-3">
+          <Activity className="text-blue-500 w-6 h-6" />
+          <h1 className="text-xl font-bold tracking-widest text-white">ORBITA<span className="text-blue-500 font-light">ATSAD</span></h1>
+        </div>
+        
+        <nav className="flex items-center gap-6 text-sm font-medium">
+          <NavLink 
+            to="/" 
+            className={({isActive}) => `flex items-center gap-2 px-3 py-1 border-b-2 transition-colors ${isActive ? "border-blue-500 text-blue-400" : "border-transparent text-slate-400 hover:text-white"}`}
+          >
+            <Radar className="w-4 h-4" /> Telemetry Dashboard
+          </NavLink>
+          <NavLink 
+            to="/explorer" 
+            className={({isActive}) => `flex items-center gap-2 px-3 py-1 border-b-2 transition-colors ${isActive ? "border-blue-500 text-blue-400" : "border-transparent text-slate-400 hover:text-white"}`}
+          >
+            <Database className="w-4 h-4" /> Registry Explorer
+          </NavLink>
+        </nav>
       </div>
+
       <div className="flex gap-4">
         <div className="flex items-center gap-2 text-sm text-slate-400 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>

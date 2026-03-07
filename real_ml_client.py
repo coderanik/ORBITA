@@ -141,7 +141,7 @@ class TelemetryAnomalyDetectorLSTM:
         else:
             print(f"[ ] Nominal telemetry. Error: {error:.4f}")
 
-    def trigger_alert(self, data, score):
+    def trigger_alert(self, data, score, object_id):
         # Determine severity based on how much it exceeds threshold
         ratio = score / self.threshold
         if ratio > 3.0:
@@ -157,7 +157,7 @@ class TelemetryAnomalyDetectorLSTM:
         now = data['timestamp']
             
         payload = {
-            "object_id": self.object_id,
+            "object_id": object_id,
             "subsystem": self.subsystem,
             "anomaly_type": anomaly_type,
             "severity": severity,
@@ -172,7 +172,7 @@ class TelemetryAnomalyDetectorLSTM:
         try:
             res = requests.post(f"{BASE_URL}/anomaly-alerts/", json=payload)
             res.raise_for_status()
-            print(f"    -> Successfully pushed {severity} alert to Dashboard (Alert ID: {res.json()['alert_id']})")
+            print(f"    -> Successfully pushed {severity} alert for SAT-{object_id} to Dashboard (Alert ID: {res.json()['alert_id']})")
         except requests.exceptions.RequestException as e:
             print(f"    -> Failed to push alert: {e}")
 
@@ -181,8 +181,8 @@ if __name__ == "__main__":
     print(" ORBITA-ATSAD REALTIME ML CLIENT (PYTORCH LSTM)           ")
     print("==========================================================")
     
-    # We will monitor Satellite ID 4, Power subsystem
-    detector = TelemetryAnomalyDetectorLSTM(object_id=4, subsystem="EPS")
+    # We will monitor all satellites, Power subsystem
+    detector = TelemetryAnomalyDetectorLSTM(object_id=0, subsystem="EPS")
     detector.train_initial_model()
     
     print("\n[*] Commencing live telemetry inference loop...")
@@ -190,11 +190,45 @@ if __name__ == "__main__":
     
     try:
         while True:
+            # Randomly select a satellite between 1 and 15
+            current_object_id = random.randint(1, 15)
+            
             # 5% chance of injecting a real anomaly into the live feed
             is_fault = random.random() < 0.05
             
             latest_telemetry = detector.generate_synthetic_telemetry(is_anomalous=is_fault)
-            detector.detect_realtime(latest_telemetry)
+            
+            if not detector.is_trained:
+                continue
+
+            # Add to live buffer
+            features = [latest_telemetry['voltage'], latest_telemetry['current'], latest_telemetry['temperature']]
+            detector.live_buffer.append(features)
+            
+            if len(detector.live_buffer) > detector.seq_len:
+                detector.live_buffer.pop(0)
+                
+            if len(detector.live_buffer) < detector.seq_len:
+                print("[ ] Buffering data for LSTM sequence...")
+                time.sleep(1)
+                continue
+                
+            seq_array = np.array([detector.live_buffer])
+            seq_normalized = (seq_array - detector.mean) / (detector.std + 1e-6)
+            X_test = torch.tensor(seq_normalized, dtype=torch.float32)
+
+            detector.model.eval()
+            with torch.no_grad():
+                output = detector.model(X_test)
+                error = torch.mean((output - X_test)**2).item()
+            
+            is_anomaly = (error > detector.threshold)
+            
+            if is_anomaly:
+                print(f"[!] LSTM ANOMALY DETECTED! SAT-{current_object_id} | Error: {error:.4f} > Threshold: {detector.threshold:.4f}")
+                detector.trigger_alert(latest_telemetry, error, current_object_id)
+            else:
+                print(f"[ ] Nominal telemetry for SAT-{current_object_id}. Error: {error:.4f}")
             
             # Real-time processing delay
             time.sleep(2)
