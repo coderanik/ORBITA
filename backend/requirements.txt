@@ -13,6 +13,8 @@ geoalchemy2==0.17.1
 # ── Validation & Settings ────────────────────────────────────
 pydantic==2.10.4
 pydantic-settings==2.7.1
+PyJWT==2.10.1
+passlib[bcrypt]==1.7.4
 
 # ── Redis / Caching ──────────────────────────────────────────
 redis==5.2.1

@@ -37,6 +37,8 @@ from app.api.routes import (
     # ── ATSAD Benchmark ──
     benchmark,
     graphs,
+    # ── Auth ──
+    auth,
 )
 
 settings = get_settings()
@@ -75,6 +77,7 @@ app.add_middleware(
 API_V1 = "/api/v1"
 
 # Core catalog
+app.include_router(auth.router,              prefix=API_V1)
 app.include_router(space_objects.router,     prefix=API_V1)
 app.include_router(operators.router,         prefix=API_V1)
 app.include_router(launch_vehicles.router,   prefix=API_V1)

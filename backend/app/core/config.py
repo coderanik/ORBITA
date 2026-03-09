@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
 
+    # ── Auth ───────────────────────────────────────────────────
+    SECRET_KEY: str = "orbita_super_secret_jwt_key_2026"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440 # 24 hours
+
     # ── Database ──────────────────────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://orbita_admin:orbita_secret_2026@localhost:5432/orbita_registry"
     DATABASE_URL_SYNC: str = "postgresql+psycopg2://orbita_admin:orbita_secret_2026@localhost:5432/orbita_registry"
