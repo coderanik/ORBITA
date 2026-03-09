@@ -4,7 +4,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000
 
 export async function fetchUnacknowledgedAlerts(): Promise<AnomalyAlert[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/anomaly-alerts/unacknowledged`);
+    const token = localStorage.getItem('orbita_token');
+    const headers: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    const res = await fetch(`${API_BASE_URL}/anomaly-alerts/unacknowledged`, { headers });
     if (!res.ok) throw new Error('Network error fetching alerts');
     const data = await res.json();
     return data.items || [];
@@ -16,7 +19,10 @@ export async function fetchUnacknowledgedAlerts(): Promise<AnomalyAlert[]> {
 
 export async function fetchPlatformStats(): Promise<PlatformStats | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/stats/overview`);
+    const token = localStorage.getItem('orbita_token');
+    const headers: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
+    const res = await fetch(`${API_BASE_URL}/stats/overview`, { headers });
     if (!res.ok) throw new Error('Network error fetching stats');
     return await res.json();
   } catch (err) {
