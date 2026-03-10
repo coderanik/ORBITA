@@ -61,6 +61,7 @@ export default function Dashboard() {
           anomalies={anomalies} 
           realPositions={realPositions}
           selectedAnomaly={selectedAnomaly}
+          setSelectedAnomaly={setSelectedAnomaly}
         />
       </div>
     </div>
