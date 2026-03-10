@@ -10,9 +10,10 @@ if (import.meta.env.VITE_CESIUM_ION_TOKEN) {
 interface GlobeViewProps {
   anomalies: AnomalyAlert[];
   realPositions: Record<string, {name: string, lat: number, lon: number, alt: number}>;
+  selectedAnomaly: AnomalyAlert | null;
 }
 
-export default function GlobeView({ anomalies, realPositions }: GlobeViewProps) {
+export default function GlobeView({ anomalies, realPositions, selectedAnomaly }: GlobeViewProps) {
   return (
     <div className="flex-1 bg-black relative">
       <Viewer 
@@ -34,6 +35,8 @@ export default function GlobeView({ anomalies, realPositions }: GlobeViewProps) 
           const satName = pos ? pos.name : `SAT-${a.object_id}`;
           
           const isCrit = a.severity === 'CRITICAL' || a.severity === 'RED';
+          const isSelected = selectedAnomaly?.alert_id === a.alert_id;
+          
           return (
             <Entity
               key={a.alert_id}
@@ -41,10 +44,10 @@ export default function GlobeView({ anomalies, realPositions }: GlobeViewProps) 
               position={Cartesian3.fromDegrees(lon, lat, alt)}
               description={`Anomaly type: ${a.anomaly_type}<br/>Subsystem: ${a.subsystem}<br/>Severity: ${a.severity}`}
               point={{ 
-                pixelSize: isCrit ? 12 : 8, 
-                color: isCrit ? Color.RED : Color.ORANGE,
+                pixelSize: isSelected ? 24 : (isCrit ? 12 : 8), 
+                color: isSelected ? Color.CYAN : (isCrit ? Color.RED : Color.ORANGE),
                 outlineColor: Color.WHITE,
-                outlineWidth: 2
+                outlineWidth: isSelected ? 4 : 2
               }}
             />
           )
