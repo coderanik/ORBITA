@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Server, Zap, ShieldAlert, GitMerge, FileText, Satellite, Binoculars, Droplet, Flame, ArrowRight, Activity, Search } from 'lucide-react'
+import { Server, Zap, ShieldAlert, GitMerge, FileText, Satellite, Binoculars, Droplet, Flame, ArrowRight, Activity, Search, RefreshCw, Download, Copy, Check } from 'lucide-react'
 import Header from '../components/Header'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -24,38 +24,41 @@ export default function Explorer() {
   const [searchTerm, setSearchTerm] = useState('')
   const { token, logout } = useAuth()
   
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true)
-      setData([])
-      try {
-        const res = await fetch(`${API_BASE_URL}${activeTab.endpoint}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        
-        if (res.status === 401) {
-          console.error("Unauthorized. Proceeding to logout.")
-          logout()
-          return
-        }
+  const [copySuccess, setCopySuccess] = useState<string | null>(null)
 
-        const json = await res.json()
-        
-        if (json && json.items) {
-          setData(json.items)
-        } else if (Array.isArray(json)) {
-          setData(json)
-        } else {
-          setData([json as Record<string, unknown>])
+  const fetchData = async () => {
+    setLoading(true)
+    setData([])
+    try {
+      const res = await fetch(`${API_BASE_URL}${activeTab.endpoint}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      } catch (err) {
-        console.error("Failed fetching explorer data:", err)
-      } finally {
-        setLoading(false)
+      })
+      
+      if (res.status === 401) {
+        console.error("Unauthorized. Proceeding to logout.")
+        logout()
+        return
       }
+
+      const json = await res.json()
+      
+      if (json && json.items) {
+        setData(json.items)
+      } else if (Array.isArray(json)) {
+        setData(json)
+      } else {
+        setData([json as Record<string, unknown>])
+      }
+    } catch (err) {
+      console.error("Failed fetching explorer data:", err)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchData()
   }, [activeTab, token, logout])
 
@@ -130,9 +133,40 @@ export default function Explorer() {
             </div>
             
             <div className="flex flex-col items-end gap-3 w-full md:w-auto">
-              <div className="text-xs font-mono text-slate-500 bg-black/40 px-3 py-1.5 rounded flex items-center gap-2 border border-white/5 w-fit">
-                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
-                {activeTab.endpoint}
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={fetchData}
+                  disabled={loading}
+                  className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-white/10 transition-colors disabled:opacity-50"
+                  title="Refresh Data"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+                <button 
+                  onClick={() => {
+                    const csv = [
+                      columns.join(','),
+                      ...filteredData.map(row => columns.map(col => JSON.stringify(row[col])).join(','))
+                    ].join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.setAttribute('hidden', '');
+                    a.setAttribute('href', url);
+                    a.setAttribute('download', `${activeTab.id}_export.csv`);
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }}
+                  className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-white/10 transition-colors"
+                  title="Export CSV"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+                <div className="text-xs font-mono text-slate-500 bg-black/40 px-3 py-1.5 rounded flex items-center gap-2 border border-white/5 w-fit">
+                  <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
+                  {activeTab.endpoint}
+                </div>
               </div>
               
               <div className="relative w-full md:w-72">
@@ -203,10 +237,23 @@ export default function Explorer() {
                             
                             // Style numeric or timestamp heavily
                             const isNumber = typeof row[col] === 'number';
+                            const cellValue = String(row[col]);
+                            const isCopied = copySuccess === `${i}-${col}`;
                             
                             return (
-                              <td key={col} className={`px-6 py-4 whitespace-nowrap border-white/5 ${isNumber ? 'font-mono text-cyan-200' : 'text-slate-300'}`}>
+                              <td 
+                                key={col} 
+                                className={`px-6 py-4 whitespace-nowrap border-white/5 group/cell cursor-pointer relative ${isNumber ? 'font-mono text-cyan-200' : 'text-slate-300'}`}
+                                onClick={() => {
+                                  navigator.clipboard.writeText(cellValue);
+                                  setCopySuccess(`${i}-${col}`);
+                                  setTimeout(() => setCopySuccess(null), 2000);
+                                }}
+                              >
                                 {val}
+                                <div className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded bg-slate-800 text-white opacity-0 group-hover/cell:opacity-100 transition-opacity ${isCopied ? 'opacity-100 text-green-400' : ''}`}>
+                                  {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                </div>
                               </td>
                             )
                           })}
