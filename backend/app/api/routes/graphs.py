@@ -126,3 +126,24 @@ async def get_space_weather():
     plt.savefig(buf, format='png', dpi=150, transparent=True)
     plt.close(fig)
     return Response(content=buf.getvalue(), media_type="image/png")
+
+@router.get("/severity-distribution", response_class=Response)
+async def get_severity_distribution():
+    labels = ['CRITICAL', 'ERROR', 'WARNING', 'INFO']
+    sizes = [12, 28, 45, 15]
+    colors = ['#ff0055', '#ffaa00', '#ffee00', '#00ffcc']
+    explode = (0.1, 0, 0, 0)
+    
+    fig = plt.figure(figsize=(8, 6))
+    plt.pie(sizes, explode=explode, labels=labels, colors=colors,
+            autopct='%1.1f%%', shadow=True, startangle=140,
+            textprops={'color':"w", 'weight':'bold'})
+    
+    plt.title('Anomaly Severity Distribution', fontsize=16, pad=20)
+    plt.axis('equal')
+    
+    plt.tight_layout()
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=150, transparent=True)
+    plt.close(fig)
+    return Response(content=buf.getvalue(), media_type="image/png")

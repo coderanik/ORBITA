@@ -43,6 +43,8 @@ class TelemetryAnomalyDetectorLSTM:
         
         # Buffer for live inference (needs sequence of `self.seq_len`)
         self.live_buffer = []
+        self.mean = np.zeros(self.input_dim)
+        self.std = np.ones(self.input_dim)
 
     def generate_synthetic_telemetry(self, is_anomalous=False):
         """Generates realistic telemetry points, with optional injected faults."""
@@ -106,7 +108,7 @@ class TelemetryAnomalyDetectorLSTM:
         self.is_trained = True
         print(f"[+] LSTM Model trained. Anomaly threshold set to: {self.threshold:.4f}")
 
-    def detect_realtime(self, current_data):
+    def detect_realtime(self, current_data, object_id):
         if not self.is_trained:
             print("Model not trained yet.")
             return
@@ -120,7 +122,7 @@ class TelemetryAnomalyDetectorLSTM:
             self.live_buffer.pop(0)
             
         if len(self.live_buffer) < self.seq_len:
-            print("[ ] Buffering data for LSTM sequence...")
+            print(f"[ ] Buffering data for SAT-{object_id} ({len(self.live_buffer)}/{self.seq_len})...")
             return
             
         # Prepare tensor
@@ -136,23 +138,26 @@ class TelemetryAnomalyDetectorLSTM:
         is_anomaly = (error > self.threshold)
         
         if is_anomaly:
-            print(f"[!] LSTM ANOMALY DETECTED! Error: {error:.4f} > Threshold: {self.threshold:.4f}")
-            self.trigger_alert(current_data, error)
+            print(f"[!] LSTM ANOMALY DETECTED! SAT-{object_id} | Error: {error:.4f} > Threshold: {self.threshold:.4f}")
+            self.trigger_alert(current_data, error, object_id)
         else:
-            print(f"[ ] Nominal telemetry. Error: {error:.4f}")
+            print(f"[ ] Nominal telemetry for SAT-{object_id}. Error: {error:.4f}")
 
     def trigger_alert(self, data, score, object_id):
         # Determine severity based on how much it exceeds threshold
         ratio = score / self.threshold
-        if ratio > 3.0:
+        if ratio > 5.0:
             severity = "CRITICAL"
-            anomaly_type = "POWER_DROP"
-        elif ratio > 1.5:
+            anomaly_type = "POWER_SYSTEM_FAILURE"
+        elif ratio > 2.5:
+            severity = "ERROR"
+            anomaly_type = "SUBSYSTEM_FAULT"
+        elif ratio > 1.2:
             severity = "WARNING"
             anomaly_type = "TELEMETRY_DEVIATION"
         else:
             severity = "INFO"
-            anomaly_type = "OTHER"
+            anomaly_type = "ANOMALY_CLEARED"
             
         now = data['timestamp']
             
@@ -161,9 +166,9 @@ class TelemetryAnomalyDetectorLSTM:
             "subsystem": self.subsystem,
             "anomaly_type": anomaly_type,
             "severity": severity,
-            "anomaly_score": float(round(score, 3)),
-            "threshold_used": float(round(self.threshold, 3)),
-            "model_version": "LSTM-Autoencoder-v2.0",
+            "anomaly_score": float(score),
+            "threshold_used": float(self.threshold),
+            "model_version": "LSTM-Autoencoder-v2.1",
             "description": f"LSTM Reconstruction Anomaly. V:{data['voltage']:.1f}V | I:{data['current']:.1f}A | T:{data['temperature']:.1f}C",
             "window_start": (now - timedelta(minutes=5)).isoformat(),
             "window_end": now.isoformat()
@@ -172,7 +177,7 @@ class TelemetryAnomalyDetectorLSTM:
         try:
             res = requests.post(f"{BASE_URL}/anomaly-alerts/", json=payload)
             res.raise_for_status()
-            print(f"    -> Successfully pushed {severity} alert for SAT-{object_id} to Dashboard (Alert ID: {res.json()['alert_id']})")
+            print(f"    -> Successfully pushed {severity} alert for SAT-{object_id} to Dashboard (Alert ID: {res.json().get('id', 'N/A')})")
         except requests.exceptions.RequestException as e:
             print(f"    -> Failed to push alert: {e}")
 
@@ -190,48 +195,18 @@ if __name__ == "__main__":
     
     try:
         while True:
-            # Randomly select a satellite between 1 and 15
-            current_object_id = random.randint(1, 15)
+            # Randomly select a satellite between 1 and 20
+            current_object_id = random.randint(1, 20)
             
-            # 5% chance of injecting a real anomaly into the live feed
-            is_fault = random.random() < 0.05
+            # 8% chance of injecting a real anomaly into the live feed
+            is_fault = random.random() < 0.08
             
             latest_telemetry = detector.generate_synthetic_telemetry(is_anomalous=is_fault)
             
-            if not detector.is_trained:
-                continue
-
-            # Add to live buffer
-            features = [latest_telemetry['voltage'], latest_telemetry['current'], latest_telemetry['temperature']]
-            detector.live_buffer.append(features)
-            
-            if len(detector.live_buffer) > detector.seq_len:
-                detector.live_buffer.pop(0)
-                
-            if len(detector.live_buffer) < detector.seq_len:
-                print("[ ] Buffering data for LSTM sequence...")
-                time.sleep(1)
-                continue
-                
-            seq_array = np.array([detector.live_buffer])
-            seq_normalized = (seq_array - detector.mean) / (detector.std + 1e-6)
-            X_test = torch.tensor(seq_normalized, dtype=torch.float32)
-
-            detector.model.eval()
-            with torch.no_grad():
-                output = detector.model(X_test)
-                error = torch.mean((output - X_test)**2).item()
-            
-            is_anomaly = (error > detector.threshold)
-            
-            if is_anomaly:
-                print(f"[!] LSTM ANOMALY DETECTED! SAT-{current_object_id} | Error: {error:.4f} > Threshold: {detector.threshold:.4f}")
-                detector.trigger_alert(latest_telemetry, error, current_object_id)
-            else:
-                print(f"[ ] Nominal telemetry for SAT-{current_object_id}. Error: {error:.4f}")
+            detector.detect_realtime(latest_telemetry, current_object_id)
             
             # Real-time processing delay
-            time.sleep(2)
+            time.sleep(1.5)
             
     except KeyboardInterrupt:
         print("\n[*] ML Client stopped by user.")
