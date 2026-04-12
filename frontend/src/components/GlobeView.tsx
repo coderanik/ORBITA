@@ -1,10 +1,17 @@
+import { useRef, useEffect } from 'react'
 import { Viewer, Entity } from 'resium'
-import { Cartesian3, Color, Ion, TileMapServiceImageryProvider, buildModuleUrl } from 'cesium'
+import type { CesiumComponentRef } from 'resium'
+import { Cartesian3, Color, Ion, TileMapServiceImageryProvider, buildModuleUrl, Viewer as CesiumViewer } from 'cesium'
 import type { AnomalyAlert } from '../types'
 import { WifiOff } from 'lucide-react'
 
+// Only set the Ion token if one is provided; otherwise leave it unset
+// so that no requests are made to api.cesium.com
 if (import.meta.env.VITE_CESIUM_ION_TOKEN) {
   Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_ION_TOKEN;
+} else {
+  // Set to empty string to prevent Cesium from using its built-in demo token
+  Ion.defaultAccessToken = '';
 }
 
 interface GlobeViewProps {
@@ -17,6 +24,23 @@ interface GlobeViewProps {
 }
 
 export default function GlobeView({ anomalies, realPositions, selectedAnomaly, setSelectedAnomaly, tleError, lastUpdated }: GlobeViewProps) {
+  const viewerRef = useRef<CesiumComponentRef<CesiumViewer>>(null);
+
+  // Replace the default Ion imagery with local NaturalEarthII textures if no token is set
+  useEffect(() => {
+    const setupOfflineImagery = async () => {
+      if (!import.meta.env.VITE_CESIUM_ION_TOKEN && viewerRef.current?.cesiumElement) {
+        const viewer = viewerRef.current.cesiumElement;
+        viewer.imageryLayers.removeAll();
+        const provider = await TileMapServiceImageryProvider.fromUrl(
+          buildModuleUrl('Assets/Textures/NaturalEarthII')
+        );
+        viewer.imageryLayers.addImageryProvider(provider);
+      }
+    };
+    setupOfflineImagery();
+  }, []);
+
   const allSatIds = new Set<string>()
   Object.keys(realPositions).forEach(k => allSatIds.add(k))
   anomalies.forEach(a => allSatIds.add(a.object_id.toString()))
@@ -37,19 +61,14 @@ export default function GlobeView({ anomalies, realPositions, selectedAnomaly, s
     }
   }
 
-  const defaultImagery = !import.meta.env.VITE_CESIUM_ION_TOKEN ? 
-    new TileMapServiceImageryProvider({
-      url: buildModuleUrl('Assets/Textures/NaturalEarthII')
-    }) : undefined;
-
   return (
     <div className="flex-1 bg-black relative">
       <Viewer
+        ref={viewerRef}
         full
         timeline={false}
         animation={false}
         baseLayerPicker={!!import.meta.env.VITE_CESIUM_ION_TOKEN}
-        imageryProvider={defaultImagery}
         geocoder={false}
         homeButton={true}
         sceneModePicker={true}
