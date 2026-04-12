@@ -80,6 +80,20 @@ services:
       - orbita-network
     restart: unless-stopped
 
+  # ── React/Vite Frontend ─────────────────────────────────────────
+  orbita-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: orbita-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - orbita-api
+    networks:
+      - orbita-network
+    restart: unless-stopped
+
 networks:
   orbita-network:
     driver: bridge
