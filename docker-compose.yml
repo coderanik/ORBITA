@@ -87,7 +87,7 @@ services:
       dockerfile: Dockerfile
     container_name: orbita-frontend
     ports:
-      - "3000:80"
+      - "5173:80"
     depends_on:
       - orbita-api
     networks:
