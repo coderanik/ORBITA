@@ -31,5 +31,9 @@ frontend/build/
 *.log
 *.bak
 
+
+/init-db
 /docs
+/paper_figures
+/tle_data
 
