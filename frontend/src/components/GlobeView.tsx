@@ -1,5 +1,5 @@
 import { Viewer, Entity } from 'resium'
-import { Cartesian3, Color, Ion } from 'cesium'
+import { Cartesian3, Color, Ion, TileMapServiceImageryProvider, buildModuleUrl } from 'cesium'
 import type { AnomalyAlert } from '../types'
 import { WifiOff } from 'lucide-react'
 
@@ -37,13 +37,19 @@ export default function GlobeView({ anomalies, realPositions, selectedAnomaly, s
     }
   }
 
+  const defaultImagery = !import.meta.env.VITE_CESIUM_ION_TOKEN ? 
+    new TileMapServiceImageryProvider({
+      url: buildModuleUrl('Assets/Textures/NaturalEarthII')
+    }) : undefined;
+
   return (
     <div className="flex-1 bg-black relative">
       <Viewer
         full
         timeline={false}
         animation={false}
-        baseLayerPicker={true}
+        baseLayerPicker={!!import.meta.env.VITE_CESIUM_ION_TOKEN}
+        imageryProvider={defaultImagery}
         geocoder={false}
         homeButton={true}
         sceneModePicker={true}
