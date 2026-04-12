@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     SPACETRACK_BASE_URL: str = "https://www.space-track.org"
 
     # ── CORS ──────────────────────────────────────────────────
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:8085"]
 
     class Config:
         env_file = ".env"
