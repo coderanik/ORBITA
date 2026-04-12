@@ -63,12 +63,14 @@ export default function GlobeView({ anomalies, realPositions, selectedAnomaly, s
 
   return (
     <div className="flex-1 bg-black relative">
+      {/* @ts-ignore — baseLayer={false} is valid in Cesium >=1.104 but not typed in resium */}
       <Viewer
         ref={viewerRef}
         full
         timeline={false}
         animation={false}
         baseLayerPicker={!!import.meta.env.VITE_CESIUM_ION_TOKEN}
+        baseLayer={import.meta.env.VITE_CESIUM_ION_TOKEN ? undefined : false}
         geocoder={false}
         homeButton={true}
         sceneModePicker={true}
