@@ -48,7 +48,7 @@ class SpaceObject(Base):
     # Relationships
     operator_ref = relationship("Operator", back_populates="space_objects")
     launch_event = relationship("LaunchEvent", back_populates="space_objects")
-    orbit_states = relationship("OrbitState", back_populates="space_object", lazy="selectin")
+    orbit_states = relationship("OrbitState", back_populates="space_object", lazy="noload")
     telemetry = relationship("SatelliteTelemetry", back_populates="space_object", lazy="noload")
     observations = relationship("TrackingObservation", back_populates="space_object", lazy="noload")
     propagations = relationship("PropagationResult", back_populates="space_object", lazy="noload")

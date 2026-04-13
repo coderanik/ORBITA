@@ -1,10 +1,17 @@
+import { useRef, useEffect } from 'react'
 import { Viewer, Entity } from 'resium'
-import { Cartesian3, Color, Ion } from 'cesium'
+import type { CesiumComponentRef } from 'resium'
+import { Cartesian3, Color, Ion, TileMapServiceImageryProvider, buildModuleUrl, Viewer as CesiumViewer } from 'cesium'
 import type { AnomalyAlert } from '../types'
+import { WifiOff } from 'lucide-react'
 
-// If the user provided an ION token in .env, we inject it securely here
+// Only set the Ion token if one is provided; otherwise leave it unset
+// so that no requests are made to api.cesium.com
 if (import.meta.env.VITE_CESIUM_ION_TOKEN) {
   Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_ION_TOKEN;
+} else {
+  // Set to empty string to prevent Cesium from using its built-in demo token
+  Ion.defaultAccessToken = '';
 }
 
 interface GlobeViewProps {
@@ -12,82 +19,101 @@ interface GlobeViewProps {
   realPositions: Record<string, {name: string, lat: number, lon: number, alt: number}>;
   selectedAnomaly: AnomalyAlert | null;
   setSelectedAnomaly: (anomaly: AnomalyAlert | null) => void;
+  tleError?: boolean;
+  lastUpdated?: Date | null;
 }
 
-export default function GlobeView({ anomalies, realPositions, selectedAnomaly, setSelectedAnomaly }: GlobeViewProps) {
-  // Combine all satellite records we have access to
-  const allSatIds = new Set<string>();
-  Object.keys(realPositions).forEach(k => allSatIds.add(k));
-  anomalies.forEach(a => allSatIds.add(a.object_id.toString()));
+export default function GlobeView({ anomalies, realPositions, selectedAnomaly, setSelectedAnomaly, tleError, lastUpdated }: GlobeViewProps) {
+  const viewerRef = useRef<CesiumComponentRef<CesiumViewer>>(null);
+
+  // Replace the default Ion imagery with local NaturalEarthII textures if no token is set
+  useEffect(() => {
+    const setupOfflineImagery = async () => {
+      if (!import.meta.env.VITE_CESIUM_ION_TOKEN && viewerRef.current?.cesiumElement) {
+        const viewer = viewerRef.current.cesiumElement;
+        viewer.imageryLayers.removeAll();
+        const provider = await TileMapServiceImageryProvider.fromUrl(
+          buildModuleUrl('Assets/Textures/NaturalEarthII')
+        );
+        viewer.imageryLayers.addImageryProvider(provider);
+      }
+    };
+    setupOfflineImagery();
+  }, []);
+
+  const allSatIds = new Set<string>()
+  Object.keys(realPositions).forEach(k => allSatIds.add(k))
+  anomalies.forEach(a => allSatIds.add(a.object_id.toString()))
+
+  const totalSats = allSatIds.size
+  const nominalCount = totalSats - anomalies.length
+  const critCount = anomalies.filter(a => a.severity === 'CRITICAL' || a.severity === 'RED').length
 
   const handleSelectedEntityChanged = (entity: any) => {
-    if (!entity || !entity.id) {
-       setSelectedAnomaly(null);
-       return;
-    }
-    const idStr = String(entity.id);
+    if (!entity || !entity.id) { setSelectedAnomaly(null); return }
+    const idStr = String(entity.id)
     if (idStr.startsWith('anomaly-')) {
-       const alertId = parseInt(idStr.replace('anomaly-', ''), 10);
-       const matched = anomalies.find(a => a.alert_id === alertId);
-       if (matched) setSelectedAnomaly(matched);
+      const alertId = parseInt(idStr.replace('anomaly-', ''), 10)
+      const matched = anomalies.find(a => a.alert_id === alertId)
+      if (matched) setSelectedAnomaly(matched)
     } else {
-       setSelectedAnomaly(null);
+      setSelectedAnomaly(null)
     }
-  };
+  }
 
   return (
     <div className="flex-1 bg-black relative">
-      <Viewer 
-        full 
-        timeline={false} 
-        animation={false} 
-        baseLayerPicker={true}
+      {/* @ts-ignore — baseLayer={false} is valid in Cesium >=1.104 but not typed in resium */}
+      <Viewer
+        ref={viewerRef}
+        full
+        timeline={false}
+        animation={false}
+        baseLayerPicker={!!import.meta.env.VITE_CESIUM_ION_TOKEN}
+        baseLayer={import.meta.env.VITE_CESIUM_ION_TOKEN ? undefined : false}
         geocoder={false}
         homeButton={true}
         sceneModePicker={true}
-        infoBox={false} // Hide default Cesium info box so our sidebar handles details
+        infoBox={false}
         navigationHelpButton={false}
         onSelectedEntityChange={handleSelectedEntityChanged}
       >
         {Array.from(allSatIds).map(satId => {
-          const pos = realPositions[satId];
-          const lat = pos ? pos.lat : 0;
-          const lon = pos ? pos.lon : 0;
-          const alt = pos ? pos.alt : 400000;
-          const satName = pos ? pos.name : `SAT-${satId}`;
+          const pos = realPositions[satId]
+          const lat = pos ? pos.lat : 0
+          const lon = pos ? pos.lon : 0
+          const alt = pos ? pos.alt : 400000
+          const satName = pos ? pos.name : `SAT-${satId}`
+          const anomaly = anomalies.find(a => a.object_id.toString() === satId)
 
-          const anomaly = anomalies.find(a => a.object_id.toString() === satId);
-          
           if (anomaly) {
-            const isCrit = anomaly.severity === 'CRITICAL' || anomaly.severity === 'RED';
-            const isSelected = selectedAnomaly?.alert_id === anomaly.alert_id;
-            
+            const isCrit = anomaly.severity === 'CRITICAL' || anomaly.severity === 'RED'
+            const isSelected = selectedAnomaly?.alert_id === anomaly.alert_id
             return (
               <Entity
                 key={`anomaly-${anomaly.alert_id}`}
                 id={`anomaly-${anomaly.alert_id}`}
-                name={`Anomaly on ${satName}`}
+                name={`⚠ ${satName}`}
                 position={Cartesian3.fromDegrees(lon, lat, alt)}
-                description={`Anomaly type: ${anomaly.anomaly_type}<br/>Subsystem: ${anomaly.subsystem}<br/>Severity: ${anomaly.severity}`}
-                point={{ 
-                  pixelSize: isSelected ? 24 : (isCrit ? 12 : 8), 
-                  color: isSelected ? Color.CYAN : (isCrit ? Color.RED : Color.ORANGE),
-                  outlineColor: Color.WHITE,
-                  outlineWidth: isSelected ? 4 : 2
+                description={`<b>Type:</b> ${anomaly.anomaly_type}<br/><b>Subsystem:</b> ${anomaly.subsystem}<br/><b>Severity:</b> ${anomaly.severity}<br/><b>Object ID:</b> ${anomaly.object_id}`}
+                point={{
+                  pixelSize: isSelected ? 22 : (isCrit ? 13 : 9),
+                  color: isSelected ? Color.CYAN : (isCrit ? Color.fromCssColorString('#ff3333') : Color.fromCssColorString('#ffaa00')),
+                  outlineColor: isSelected ? Color.WHITE : Color.fromCssColorString('#ffffff40'),
+                  outlineWidth: isSelected ? 3 : 1.5
                 }}
               />
             )
           } else {
-            // Non-anomalous satellite
             return (
               <Entity
                 key={`sat-${satId}`}
                 id={`sat-${satId}`}
                 name={satName}
                 position={Cartesian3.fromDegrees(lon, lat, alt)}
-                description={`Status: Nominal`}
-                point={{ 
-                  pixelSize: 6, 
+                description={`<b>Status:</b> Nominal<br/><b>Object ID:</b> ${satId}`}
+                point={{
+                  pixelSize: 5,
                   color: Color.fromCssColorString('#4ade80'),
                   outlineColor: Color.fromCssColorString('#14532d'),
                   outlineWidth: 1
@@ -98,10 +124,58 @@ export default function GlobeView({ anomalies, realPositions, selectedAnomaly, s
         })}
       </Viewer>
 
-      {/* Map Overlay Overlay */}
-      <div className="absolute top-4 left-4 p-4 rounded-xl backdrop-blur-md bg-slate-950/60 border border-white/10 pointer-events-none">
-        <h3 className="text-white/80 font-medium text-sm mb-1">Live Constellation View</h3>
-        <p className="text-xs text-white/50">Tracking assets dynamically driven by API Data</p>
+      {/* Top-left overlay */}
+      <div className="absolute top-4 left-4 p-4 rounded-xl backdrop-blur-md bg-slate-950/70 border border-white/10 pointer-events-none space-y-2 min-w-[200px]">
+        <h3 className="text-white/90 font-semibold text-sm tracking-wide">Live Constellation</h3>
+        <p className="text-xs text-white/40">TLE-driven orbital tracking</p>
+        <div className="pt-2 border-t border-white/5 space-y-1.5">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
+            <span className="text-slate-300">{nominalCount} Nominal</span>
+          </div>
+          {anomalies.length > 0 && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
+              <span className="text-slate-300">{anomalies.length - critCount} Anomaly</span>
+            </div>
+          )}
+          {critCount > 0 && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)] animate-pulse" />
+              <span className="text-red-300 font-medium">{critCount} Critical</span>
+            </div>
+          )}
+        </div>
+        {lastUpdated && (
+          <p className="text-[10px] text-white/25 pt-1 border-t border-white/5">
+            Updated {lastUpdated.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+          </p>
+        )}
+      </div>
+
+      {/* TLE error badge */}
+      {tleError && (
+        <div className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/15 border border-amber-500/25 text-amber-400 text-xs backdrop-blur-sm pointer-events-none">
+          <WifiOff className="w-3 h-3" />
+          TLE service offline — positions approximate
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="absolute bottom-4 right-4 flex flex-col gap-1.5 px-3 py-2.5 rounded-lg bg-slate-950/70 backdrop-blur-md border border-white/5 pointer-events-none">
+        <p className="text-[9px] text-slate-500 uppercase tracking-wider font-bold mb-1">Legend</p>
+        <div className="flex items-center gap-2 text-[11px] text-slate-300">
+          <span className="w-2.5 h-2.5 rounded-full bg-green-400" /> Nominal
+        </div>
+        <div className="flex items-center gap-2 text-[11px] text-slate-300">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Warning
+        </div>
+        <div className="flex items-center gap-2 text-[11px] text-slate-300">
+          <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" /> Critical
+        </div>
+        <div className="flex items-center gap-2 text-[11px] text-cyan-300">
+          <span className="w-3 h-3 rounded-full bg-cyan-400 ring-1 ring-white ring-offset-1 ring-offset-transparent" /> Selected
+        </div>
       </div>
     </div>
   )
