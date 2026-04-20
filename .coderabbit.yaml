@@ -1,0 +1,26 @@
+# CodeRabbit Configuration
+# Documentation: https://docs.coderabbit.ai/getting-started/configure-coderabbit
+
+# Language specific settings
+language:
+  python:
+    framework: fastapi
+  javascript:
+    framework: react
+
+# Reviews configuration
+reviews:
+  # Enable high-level summary of changes
+  summary: true
+  # Enable line-by-line code suggestions
+  chatty: true
+  # Profile for the AI reviewer
+  profile: "software-engineer"
+
+# Quality & Security
+# Note: CodeRabbit performs these automatically, but we can nudge it
+instructions: |
+  - Focus on security vulnerabilities, especially SQL injection and XSS.
+  - Ensure all new API endpoints follow the project's REST patterns.
+  - Verify that satellite propagation logic handles edge cases (e.g. invalid TLE).
+  - Check for proper error handling in asynchronous tasks.

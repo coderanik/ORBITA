@@ -1,0 +1,35 @@
+name: Jules AI Agent
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Run every Monday at midnight
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'What should Jules do?'
+        required: true
+        default: 'Scan for missing unit tests in the backend and propose a PR.'
+
+jobs:
+  jules-task:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Invoke Jules
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          prompt: |
+            You are an expert AI software engineer for the ORBITA project. 
+            ORBITA is a space situational awareness platform.
+            
+            Current Task: ${{ github.event.inputs.prompt || 'Perform a general code quality and security scan. Look for outdated patterns or missing documentation.' }}
+            
+            Context:
+            - Backend: FastAPI, SQLAlchemy, Skyfield (orbit propagation)
+            - Frontend: React, Vite, TypeScript
+            - Infrastructure: Docker Compose, Kubernetes
+            
+            Please propose changes via a Pull Request.
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
