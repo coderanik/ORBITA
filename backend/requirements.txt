@@ -23,6 +23,10 @@ redis==5.2.1
 skyfield==1.49
 sgp4==2.23
 numpy==2.2.1
+scipy>=1.14.0
+astropy>=6.1
+nrlmsise00>=0.1.2
+jplephem>=2.22
 
 # ── HTTP Client (for external data sources) ──────────────────
 httpx==0.28.1
