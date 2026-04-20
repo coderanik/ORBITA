@@ -34,6 +34,8 @@ from app.api.routes import (
     anomaly_alerts,
     debris_classifications,
     congestion_reports,
+    # ── High-Fidelity Physics ──
+    physics,
     # ── ATSAD Benchmark ──
     benchmark,
     graphs,
@@ -111,6 +113,22 @@ app.include_router(benchmark.router,         prefix=API_V1)
 # Dashboard
 app.include_router(stats.router,             prefix=API_V1)
 app.include_router(graphs.router,            prefix=API_V1)
+
+# High-Fidelity Physics
+app.include_router(physics.router,           prefix=API_V1)
+
+# WebSockets
+from app.api.routes import websockets
+app.include_router(websockets.router,        prefix=API_V1)
+
+# AI Agents
+from app.api.routes import agents
+app.include_router(agents.router,            prefix=API_V1)
+
+# Kessler Syndrome Simulator
+from app.api.routes import kessler
+app.include_router(kessler.router,           prefix=API_V1)
+
 
 
 @app.get("/", tags=["Health"])

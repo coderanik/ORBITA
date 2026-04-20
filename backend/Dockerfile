@@ -1,10 +1,12 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-# System dependencies for psycopg2, PostGIS bindings, etc.
+# System dependencies for psycopg2, PostGIS bindings, scipy, etc.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    g++ \
+    gfortran \
     libpq-dev \
     libgeos-dev \
     libproj-dev \
@@ -18,4 +20,5 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Default command — overridden by worker/beat in docker-compose
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

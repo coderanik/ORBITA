@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import Header from '../components/Header'
 import Sidebar from '../components/Sidebar'
 import GlobeView from '../components/GlobeView'
+import TimelineSlider from '../components/TimelineSlider'
+import { useTimeController } from '../hooks/useTimeController'
+import { useWebSocket } from '../hooks/useWebSocket'
 import { fetchUnacknowledgedAlerts, fetchPlatformStats, fetchConjunctionAlerts } from '../api/orbita'
 import type { AnomalyAlert, PlatformStats, ConjunctionAlert } from '../types'
-import { WifiOff, RefreshCw, Globe, AlertTriangle, Zap, Layers } from 'lucide-react'
+import { WifiOff, RefreshCw, Globe, AlertTriangle, Zap, Layers, Radio } from 'lucide-react'
 
 function KpiCard({
   label, value, sub, icon: Icon, color, pulse
@@ -34,6 +37,27 @@ export default function Dashboard() {
   const [backendError, setBackendError] = useState(false)
   const [tleError, setTleError] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+
+  // Phase 4: Time controller for timeline scrubbing
+  const timeController = useTimeController()
+
+  // Phase 2: WebSocket connection for real-time streaming
+  const { isConnected, lastMessage } = useWebSocket()
+
+  // Process incoming WebSocket messages
+  useEffect(() => {
+    if (!lastMessage) return
+    
+    if (lastMessage.type === 'CONJUNCTION_ALERT') {
+      // Refresh conjunctions when a new alert arrives
+      fetchConjunctionAlerts().then(setConjunctions)
+    } else if (lastMessage.type === 'ANOMALY_DETECTED') {
+      // Refresh anomalies
+      fetchUnacknowledgedAlerts().then(setAnomalies)
+    } else if (lastMessage.type === 'TLE_UPDATED') {
+      fetchPositions()
+    }
+  }, [lastMessage])
 
   const loadData = useCallback(async () => {
     try {
@@ -81,6 +105,11 @@ export default function Dashboard() {
 
   const critCount = anomalies.filter(a => a.severity === 'CRITICAL' || a.severity === 'RED').length
   const orbitClasses = stats ? Object.keys(stats.objects_by_orbit_class).length : 0
+
+  // Timeline epoch range: 12 hours around now
+  const now = new Date()
+  const epochStart = new Date(now.getTime() - 6 * 60 * 60 * 1000)
+  const epochEnd = new Date(now.getTime() + 6 * 60 * 60 * 1000)
 
   return (
     <div className="h-screen w-full flex flex-col bg-[#04060b] text-slate-200 overflow-hidden">
@@ -143,6 +172,14 @@ export default function Dashboard() {
           icon={Layers}
           color="border-purple-500/20 text-purple-400"
         />
+        {/* WebSocket status indicator */}
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl border ${isConnected ? 'border-emerald-500/20 text-emerald-400' : 'border-red-500/20 text-red-400'} bg-gradient-to-br from-slate-900/60 to-slate-800/30 min-w-[120px]`}>
+          <Radio className={`w-4 h-4 ${isConnected ? 'animate-pulse' : ''}`} />
+          <div>
+            <div className="text-xs font-bold">{isConnected ? 'LIVE' : 'OFFLINE'}</div>
+            <div className="text-[10px] opacity-60">WebSocket</div>
+          </div>
+        </div>
       </div>
 
       {/* Main content */}
@@ -165,6 +202,22 @@ export default function Dashboard() {
           lastUpdated={lastUpdated}
         />
       </div>
+
+      {/* Phase 4: Timeline Slider */}
+      <TimelineSlider
+        startEpoch={epochStart}
+        endEpoch={epochEnd}
+        currentTime={timeController.currentTime}
+        isPlaying={timeController.isPlaying}
+        playbackSpeed={timeController.playbackSpeed}
+        onTimeChange={timeController.setTime}
+        onTogglePlay={timeController.togglePlay}
+        onCycleSpeed={timeController.cycleSpeed}
+        onResetToNow={timeController.resetToNow}
+        onJumpForward={timeController.jumpForward}
+        onJumpBackward={timeController.jumpBackward}
+        events={conjunctions}
+      />
     </div>
   )
 }

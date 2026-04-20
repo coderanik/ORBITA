@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orbita-worker
+  namespace: orbita
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orbita-worker
+  template:
+    metadata:
+      labels:
+        app: orbita-worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/anik/orbita-api:latest
+          command: ["celery", "-A", "app.workers.celery_app", "worker", "-l", "info", "-c", "4"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: orbita-secrets
+                  key: database-url
+            - name: REDIS_URL
+              value: redis://orbita-redis:6379/0
+            - name: CELERY_BROKER_URL
+              value: amqp://guest:guest@orbita-rabbitmq:5672//
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"

@@ -23,9 +23,23 @@ redis==5.2.1
 skyfield==1.49
 sgp4==2.23
 numpy==2.2.1
+scipy>=1.14.0
+astropy>=6.1
+nrlmsise00>=0.1.2
+jplephem>=2.22
 
 # ── HTTP Client (for external data sources) ──────────────────
 httpx==0.28.1
+
+# ── Real-Time & Background Workers (Phase 2) ──────────────────
+celery[redis]>=5.4.0
+flower>=2.0.0
+websockets>=13.0
+
+# ── AI Agents (Phase 3) ───────────────────────────────────────
+langchain>=0.3.0
+langchain-openai>=0.2.0
+langchain-anthropic>=0.2.0
 
 # ── Utilities ─────────────────────────────────────────────────
 python-dateutil==2.9.0
