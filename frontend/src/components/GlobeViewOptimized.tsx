@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react'
-import { Viewer, Entity } from 'resium'
+import { Viewer } from 'resium'
 import type { CesiumComponentRef } from 'resium'
 import { Cartesian3, Color, Ion, TileMapServiceImageryProvider, buildModuleUrl, Viewer as CesiumViewer, PointPrimitiveCollection, NearFarScalar } from 'cesium'
 import type { SatellitePosition } from '../hooks/useSatelliteStore'

@@ -1,7 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { Viewer } from 'resium'
-import type { CesiumComponentRef } from 'resium'
-import { Cartesian3, Color, Ion, Viewer as CesiumViewer, PolylineCollection, Material } from 'cesium'
+import { useEffect, useRef } from 'react'
+import { Cartesian3 } from 'cesium'
 
 interface TrajectoryPoint {
   lat: number
@@ -20,7 +18,6 @@ interface TrajectoryRendererProps {
  * for efficient batch rendering of hundreds of orbits.
  */
 export default function TrajectoryRenderer({ trajectories, highlightId }: TrajectoryRendererProps) {
-  const polyCollectionRef = useRef<any>(null)
 
   // This component is designed to be used inside an existing Viewer context
   // For standalone use, wrap in a Viewer

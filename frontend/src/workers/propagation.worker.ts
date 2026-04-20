@@ -37,7 +37,7 @@ self.onmessage = function (event: MessageEvent<PropagateMessage>) {
   const { type, tles, targetTime } = event.data
 
   if (type === 'PROPAGATE') {
-    const date = new Date(targetTime)
+    // const date = new Date(targetTime)
     const results: PositionResult[] = []
 
     for (const tle of tles) {
