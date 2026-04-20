@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: orbita
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbita-db
+  namespace: orbita
+spec:
+  selector:
+    app: orbita-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: orbita-db
+  namespace: orbita
+spec:
+  serviceName: orbita-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orbita-db
+  template:
+    metadata:
+      labels:
+        app: orbita-db
+    spec:
+      containers:
+        - name: postgres
+          image: timescale/timescaledb-ha:pg15-latest
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: orbita_registry
+            - name: POSTGRES_USER
+              value: orbita_admin
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: orbita-secrets
+                  key: db-password
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "orbita_admin", "-d", "orbita_registry"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
