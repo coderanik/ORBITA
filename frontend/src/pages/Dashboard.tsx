@@ -5,7 +5,7 @@ import GlobeView from '../components/GlobeView'
 import TimelineSlider from '../components/TimelineSlider'
 import { useTimeController } from '../hooks/useTimeController'
 import { useWebSocket } from '../hooks/useWebSocket'
-import { fetchUnacknowledgedAlerts, fetchPlatformStats, fetchConjunctionAlerts } from '../api/orbita'
+import { fetchUnacknowledgedAlerts, fetchPlatformStats, fetchConjunctionAlerts, fetchRealPositions } from '../api/orbita'
 import type { AnomalyAlert, PlatformStats, ConjunctionAlert } from '../types'
 import { WifiOff, RefreshCw, Globe, AlertTriangle, Zap, Layers, Radio } from 'lucide-react'
 
@@ -77,13 +77,11 @@ export default function Dashboard() {
   }, [])
 
   const fetchPositions = useCallback(async () => {
-    try {
-      const res = await fetch("http://localhost:8001/real-positions")
-      if (!res.ok) throw new Error()
-      const data = await res.json()
+    const data = await fetchRealPositions()
+    if (Object.keys(data).length > 0) {
       setRealPositions(data)
       setTleError(false)
-    } catch {
+    } else {
       setTleError(true)
     }
   }, [])
@@ -136,7 +134,7 @@ export default function Dashboard() {
       {tleError && (
         <div className="shrink-0 bg-amber-500/10 border-b border-amber-500/20 px-6 py-2 flex items-center gap-2 text-amber-400/80 text-xs">
           <WifiOff className="w-3 h-3" />
-          TLE position service (port 8001) unavailable — globe showing static positions only.
+          TLE position service unavailable — globe showing static positions only.
         </div>
       )}
 
