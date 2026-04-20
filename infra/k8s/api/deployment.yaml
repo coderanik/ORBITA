@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbita-api
+  namespace: orbita
+spec:
+  selector:
+    app: orbita-api
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orbita-api
+  namespace: orbita
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orbita-api
+  template:
+    metadata:
+      labels:
+        app: orbita-api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/anik/orbita-api:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: orbita-secrets
+                  key: database-url
+            - name: REDIS_URL
+              value: redis://orbita-redis:6379/0
+            - name: ENVIRONMENT
+              value: production
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: orbita-api-hpa
+  namespace: orbita
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: orbita-api
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
