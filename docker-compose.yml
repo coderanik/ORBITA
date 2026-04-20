@@ -1,5 +1,6 @@
 services:
-  # ── PostgreSQL + PostGIS + TimescaleDB ──────────────────────────
+  # ── PostgreSQL + PostGIS + TimescaleDB (Core Database) ──────────
+  # Purpose: Persistent storage for satellite catalogs, telemetry metrics, and RBAC auth.
   orbita-db:
     build:
       context: ./docker
@@ -23,7 +24,8 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ── Redis (cache + message broker) ──────────────────────────────
+  # ── Redis (In-Memory Cache) ─────────────────────────────────────
+  # Purpose: Fast data retrieval (caching API responses) and WebSocket pub/sub.
   orbita-redis:
     image: redis:7-alpine
     container_name: orbita-redis
@@ -41,6 +43,7 @@ services:
     restart: unless-stopped
 
   # ── RabbitMQ (Message Broker for Celery) ────────────────────────
+  # Purpose: Handles task queues, routing jobs between the API and Celery workers.
   orbita-rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: orbita-rabbitmq
@@ -56,7 +59,8 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ── Celery Worker ───────────────────────────────────────────────
+  # ── Celery Worker (Background Task Executor) ────────────────────
+  # Purpose: Executes long-running tasks asynchronously (e.g., SGP4 propagation, Kessler sims, AI Agents).
   orbita-worker:
     build:
       context: ./backend
@@ -69,6 +73,8 @@ services:
       REDIS_URL: redis://orbita-redis:6379/0
       CELERY_BROKER_URL: amqp://guest:guest@orbita-rabbitmq:5672//
       ENVIRONMENT: development
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     depends_on:
       orbita-db:
         condition: service_healthy
@@ -80,7 +86,8 @@ services:
       - orbita-network
     restart: unless-stopped
 
-  # ── Celery Beat (Scheduler) ─────────────────────────────────────
+  # ── Celery Beat (Periodic Task Scheduler) ───────────────────────
+  # Purpose: Triggers recurring jobs (e.g., fetch TLEs every 30m, Conjunction Scan every 1h).
   orbita-beat:
     build:
       context: ./backend
@@ -115,7 +122,8 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── FastAPI Backend ─────────────────────────────────────────────
+  # ── FastAPI Backend (Core API Services) ─────────────────────────
+  # Purpose: Handles REST requests, WebSocket streams, and triggers background Celery tasks.
   orbita-api:
     build:
       context: ./backend
@@ -129,17 +137,23 @@ services:
       DATABASE_URL: postgresql+asyncpg://orbita_admin:orbita_secret_2026@orbita-db:5432/orbita_registry
       DATABASE_URL_SYNC: postgresql+psycopg2://orbita_admin:orbita_secret_2026@orbita-db:5432/orbita_registry
       REDIS_URL: redis://orbita-redis:6379/0
+      CELERY_BROKER_URL: amqp://guest:guest@orbita-rabbitmq:5672//
       ENVIRONMENT: development
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     depends_on:
       orbita-db:
         condition: service_healthy
       orbita-redis:
         condition: service_healthy
+      orbita-rabbitmq:
+        condition: service_healthy
     networks:
       - orbita-network
     restart: unless-stopped
 
-  # ── React/Vite Frontend ─────────────────────────────────────────
+  # ── React/Vite Frontend (Web Dashboard) ─────────────────────────
+  # Purpose: Serves the compiled React app using Nginx. Acts as a reverse proxy to route /api to FastAPI.
   orbita-frontend:
     build:
       context: ./frontend
