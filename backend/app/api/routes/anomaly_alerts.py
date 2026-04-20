@@ -1,6 +1,6 @@
 """CRUD endpoints for ML Anomaly Alerts."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +12,8 @@ from app.schemas.anomaly_alert import (
     AnomalyAlertUpdate,
     AnomalyAlertList,
 )
+from app.services.anomaly_explainer import AnomalyExplainer
+from app.services.report_generator import ReportGenerator
 
 router = APIRouter(prefix="/anomaly-alerts", tags=["Anomaly Detection"])
 
@@ -84,6 +86,29 @@ async def get_anomaly_alert(alert_id: int, db: AsyncSession = Depends(get_db)):
     if not obj:
         raise HTTPException(status_code=404, detail="Anomaly alert not found")
     return AnomalyAlertRead.model_validate(obj)
+
+
+@router.get("/{alert_id}/explain")
+async def explain_anomaly(alert_id: int, db: AsyncSession = Depends(get_db)):
+    """Generate an AI-powered explanation for an anomaly."""
+    explainer = AnomalyExplainer(db)
+    explanation = await explainer.explain_anomaly(alert_id)
+    return {"explanation": explanation}
+
+
+@router.get("/reports/mission/{object_id}")
+async def get_mission_report(object_id: int, db: AsyncSession = Depends(get_db)):
+    """Generate and download a mission health report PDF."""
+    generator = ReportGenerator(db)
+    try:
+        pdf_buffer = await generator.generate_mission_report(object_id)
+        return Response(
+            content=pdf_buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=mission_report_{object_id}.pdf"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/", response_model=AnomalyAlertRead, status_code=201)
