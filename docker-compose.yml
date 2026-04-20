@@ -40,6 +40,65 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # ── RabbitMQ (Message Broker for Celery) ────────────────────────
+  orbita-rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: orbita-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - orbita-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Celery Worker ───────────────────────────────────────────────
+  orbita-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: orbita-worker
+    command: celery -A app.workers.celery_app worker -l info -c 4
+    environment:
+      DATABASE_URL: postgresql+asyncpg://orbita_admin:orbita_secret_2026@orbita-db:5432/orbita_registry
+      DATABASE_URL_SYNC: postgresql+psycopg2://orbita_admin:orbita_secret_2026@orbita-db:5432/orbita_registry
+      REDIS_URL: redis://orbita-redis:6379/0
+      CELERY_BROKER_URL: amqp://guest:guest@orbita-rabbitmq:5672//
+      ENVIRONMENT: development
+    depends_on:
+      orbita-db:
+        condition: service_healthy
+      orbita-redis:
+        condition: service_healthy
+      orbita-rabbitmq:
+        condition: service_healthy
+    networks:
+      - orbita-network
+    restart: unless-stopped
+
+  # ── Celery Beat (Scheduler) ─────────────────────────────────────
+  orbita-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: orbita-beat
+    command: celery -A app.workers.celery_app beat -l info
+    environment:
+      DATABASE_URL: postgresql+asyncpg://orbita_admin:orbita_secret_2026@orbita-db:5432/orbita_registry
+      DATABASE_URL_SYNC: postgresql+psycopg2://orbita_admin:orbita_secret_2026@orbita-db:5432/orbita_registry
+      REDIS_URL: redis://orbita-redis:6379/0
+      CELERY_BROKER_URL: amqp://guest:guest@orbita-rabbitmq:5672//
+      ENVIRONMENT: development
+    depends_on:
+      - orbita-worker
+    networks:
+      - orbita-network
+    restart: unless-stopped
+
   # ── pgAdmin (database management UI) ───────────────────────────
   orbita-pgadmin:
     image: dpage/pgadmin4:latest
