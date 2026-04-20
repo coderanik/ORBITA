@@ -46,3 +46,6 @@ python-dateutil==2.9.0
 orjson==3.10.13
 matplotlib
 seaborn
+# ── Machine Learning ──────────────────────────────────────────
+torch>=2.0.0
+pandas>=2.0.0
