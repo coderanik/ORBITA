@@ -4,6 +4,8 @@ import Dashboard from './pages/Dashboard'
 import Explorer from './pages/Explorer'
 import Login from './pages/Login'
 import Benchmark from './pages/Benchmark'
+import KesslerSimulator from './pages/KesslerSimulator'
+import AIInvestigation from './pages/AIInvestigation'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -39,6 +41,8 @@ function App() {
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/explorer" element={<ProtectedRoute><Explorer /></ProtectedRoute>} />
           <Route path="/benchmark" element={<ProtectedRoute><Benchmark /></ProtectedRoute>} />
+          <Route path="/kessler" element={<ProtectedRoute><KesslerSimulator /></ProtectedRoute>} />
+          <Route path="/investigate" element={<ProtectedRoute><AIInvestigation /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
