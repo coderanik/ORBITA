@@ -53,17 +53,41 @@ ORBITA-ATSAD bridges the gap between benchmark evaluation and operational deploy
 [External Data Sources: CelesTrak, Space-Track.org, NOAA SWPC]
         |
         v
-[FastAPI Backend] <---> [PostgreSQL + PostGIS + TimescaleDB]
-        |                         |
-        v                         v
-   [Redis Cache]          [Temporal + Spatial + ML Queries]
-        |
-        v
-[ATSAD Benchmark Engine]    [React Frontend + CesiumJS] (coming soon)
-   |          |
+[Celery Workers + Beat] ──> [RabbitMQ] ──> [Background Tasks]
+   │  TLE updates (30m)       │             │  Conjunction Screening (KD-Tree)
+   │  Space Weather (15m)     │             │  Telemetry Ingestion
+   │  Conjunction Scan (1h)   │             │  Kessler Simulation
+   v                          v             v
+[FastAPI Backend] <────────> [PostgreSQL + PostGIS + TimescaleDB]
+   │   │                         │
+   │   │   [WebSocket /ws] ──>   │   [Row-Level Security (RBAC)]
+   │   │                         v
+   │   │                  [Temporal + Spatial + ML Queries]
+   │   v
+   │  [LangChain AI Agent] ──> [GPT-4o / Claude] ──> Incident Reports
+   │   │  Tools: query_telemetry, run_propagation, correlate_events
+   │   v
+   │  [HiFi Physics Engine]
+   │   │  Numerical Propagator (DOP853)
+   │   │  J2 Perturbations + Atmospheric Drag
+   │   │  KD-Tree Collision Screening
+   │   │  Collision Probability (Alfano/Foster)
+   │   │  CAM Optimizer (SLSQP)
+   │   │  NASA Breakup Model (Kessler Sim)
+   │   v
+   │  [Redis Cache]
+   v
+[React + CesiumJS Frontend]
+   │  Instanced Rendering (10K+ sats @ 60 FPS)
+   │  Timeline Slider + Time Machine
+   │  Web Worker SGP4 Propagation
+   │  Debris Field Visualization
+   v
+[ATSAD Benchmark Engine]
+   │          │
    v          v
 [Model Registry]  [Evaluation Pipeline]
-   |                    |
+   │                    │
    v                    v
 [Leaderboard]    [Anomaly Visualizations]
 ```
@@ -74,11 +98,17 @@ ORBITA-ATSAD bridges the gap between benchmark evaluation and operational deploy
 |-------|-----------|
 | **Database** | PostgreSQL 15 + PostGIS + TimescaleDB |
 | **Backend** | Python / FastAPI |
-| **Orbit Propagation** | SGP4 / Skyfield |
+| **Orbit Propagation** | SGP4 / Skyfield + SciPy DOP853 Numerical Propagator |
+| **Physics Engine** | J2-J6 Perturbations, Atmospheric Drag (NRLMSISE-00), Covariance Propagation |
+| **Collision Assessment** | KD-Tree Screening, Alfano Pc, CAM Optimizer |
+| **AI Agents** | LangChain + OpenAI GPT-4o / Anthropic Claude |
 | **ML Evaluation** | NumPy / ATSADBench metrics engine |
+| **Message Broker** | RabbitMQ + Celery Workers + Beat Scheduler |
 | **Cache** | Redis |
-| **Frontend** | React + TypeScript + CesiumJS (planned) |
-| **Containerization** | Docker + Docker Compose |
+| **Frontend** | React + TypeScript + CesiumJS (Instanced Rendering) |
+| **Containerization** | Docker + Docker Compose + Kubernetes |
+| **CI/CD** | GitHub Actions |
+| **Auth** | JWT + RBAC + API Keys + Row-Level Security |
 
 ## Quick Start
 
@@ -231,50 +261,110 @@ ORBITA-ATSAD implements the complete ATSADBench evaluation framework:
 ORBITA/
 ├── backend/
 │   ├── app/
-│   │   ├── api/routes/         # FastAPI route handlers (19 modules)
-│   │   │   ├── space_objects   # Core catalog CRUD
-│   │   │   ├── operators       # Space agency management
-│   │   │   ├── launch_vehicles # Rocket catalog
-│   │   │   ├── launches        # Launch events
-│   │   │   ├── missions        # Mission management
-│   │   │   ├── orbits          # Orbit state tracking
-│   │   │   ├── observations    # Radar/optical tracking
-│   │   │   ├── propagations    # Orbit propagation results
-│   │   │   ├── ground_stations # Ground station catalog
-│   │   │   ├── telemetry       # Satellite health data
-│   │   │   ├── conjunctions    # Collision risk assessment
-│   │   │   ├── maneuvers       # Orbital maneuvers
-│   │   │   ├── breakup_events  # In-orbit breakup events
-│   │   │   ├── reentry_events  # Atmospheric reentry events
-│   │   │   ├── space_weather   # Space weather data
-│   │   │   ├── anomaly_alerts  # ML anomaly detection
+│   │   ├── api/routes/              # FastAPI route handlers (25 modules)
+│   │   │   ├── space_objects        # Core catalog CRUD
+│   │   │   ├── operators            # Space agency management
+│   │   │   ├── launch_vehicles      # Rocket catalog
+│   │   │   ├── launches             # Launch events
+│   │   │   ├── missions             # Mission management
+│   │   │   ├── orbits               # Orbit state tracking
+│   │   │   ├── observations         # Radar/optical tracking
+│   │   │   ├── propagations         # Orbit propagation results
+│   │   │   ├── ground_stations      # Ground station catalog
+│   │   │   ├── telemetry            # Satellite health data
+│   │   │   ├── conjunctions         # Collision risk assessment
+│   │   │   ├── maneuvers            # Orbital maneuvers
+│   │   │   ├── breakup_events       # In-orbit breakup events
+│   │   │   ├── reentry_events       # Atmospheric reentry events
+│   │   │   ├── space_weather        # Space weather data
+│   │   │   ├── anomaly_alerts       # ML anomaly detection
 │   │   │   ├── debris_classifications # ML debris typing
-│   │   │   ├── congestion_reports     # Orbital congestion
-│   │   │   ├── benchmark       # 🆕 ATSAD Benchmark
-│   │   │   └── stats           # Dashboard statistics
-│   │   ├── core/               # Config, database setup
-│   │   ├── models/             # SQLAlchemy ORM models (23 models)
-│   │   ├── schemas/            # Pydantic request/response schemas
-│   │   ├── services/           # Business logic
-│   │   │   ├── tle_service     # TLE parsing from CelesTrak
-│   │   │   └── atsad_evaluator # 🆕 ATSADBench metrics engine
-│   │   └── main.py             # App entry point
+│   │   │   ├── congestion_reports   # Orbital congestion
+│   │   │   ├── benchmark            # ATSAD Benchmark
+│   │   │   ├── stats                # Dashboard statistics
+│   │   │   ├── physics              # 🚀 HiFi propagation & collision endpoints
+│   │   │   ├── websockets           # 📡 Real-time WebSocket streaming
+│   │   │   ├── agents               # 🤖 Autonomous AI investigation
+│   │   │   └── kessler              # 💥 Kessler Syndrome Simulator
+│   │   ├── physics/                 # 🚀 High-Fidelity Physics Engine
+│   │   │   ├── frames               # TEME ↔ GCRS ↔ ITRS transforms
+│   │   │   ├── perturbations        # J2, drag, SRP force models
+│   │   │   ├── propagator           # DOP853 numerical integrator
+│   │   │   ├── covariance           # STM covariance propagation
+│   │   │   ├── breakup_model        # NASA Standard Breakup Model
+│   │   │   ├── orbit_determination  # Batch least-squares OD
+│   │   │   └── collision/
+│   │   │       ├── screening        # KD-Tree O(N log N) screening
+│   │   │       ├── probability      # Alfano/Foster Pc calculation
+│   │   │       └── cam_optimizer    # CAM delta-v optimizer
+│   │   ├── agents/                  # 🤖 Autonomous AI Agents
+│   │   │   ├── agent                # ReAct agent orchestrator
+│   │   │   ├── config               # LLM provider config
+│   │   │   ├── prompts              # System prompts
+│   │   │   └── tools/               # LangChain tools
+│   │   │       ├── db_query          # Telemetry & weather queries
+│   │   │       ├── propagation       # Orbit simulation tool
+│   │   │       ├── weather_correlator # Event correlation
+│   │   │       └── report_writer     # Incident report generation
+│   │   ├── workers/                 # 📡 Celery Background Tasks
+│   │   │   ├── celery_app           # Celery configuration
+│   │   │   ├── scheduler            # Beat schedule
+│   │   │   └── tasks/
+│   │   │       ├── tle_updater       # Auto TLE fetch (30 min)
+│   │   │       ├── space_weather     # NOAA data fetch (15 min)
+│   │   │       ├── conjunction_scan  # Full catalog screen (1 hr)
+│   │   │       ├── telemetry_ingest  # Streaming telemetry processor
+│   │   │       └── kessler_sim       # 💥 Kessler simulation pipeline
+│   │   ├── websocket/               # WebSocket real-time layer
+│   │   │   ├── manager              # Connection manager
+│   │   │   └── events               # Event type constants
+│   │   ├── auth/                    # 🔐 Multi-Tenant RBAC
+│   │   │   ├── jwt_handler          # Token issue/verify
+│   │   │   ├── rbac                 # Role hierarchy & permissions
+│   │   │   ├── dependencies         # FastAPI auth dependencies
+│   │   │   └── api_key              # API key auth for machines
+│   │   ├── core/                    # Config, database setup
+│   │   ├── models/                  # SQLAlchemy ORM models (23 models)
+│   │   ├── schemas/                 # Pydantic request/response schemas
+│   │   ├── services/                # Business logic
+│   │   └── main.py                  # App entry point
 │   ├── tests/
 │   ├── Dockerfile
 │   └── requirements.txt
-├── init-db/                    # SQL scripts run on first DB start
-│   ├── 01-extensions.sql
-│   ├── 02-schemas.sql
-│   ├── 03-tables.sql
-│   ├── 04-views.sql
-│   ├── 05-functions.sql
-│   ├── 06-seed-data.sql
-│   ├── 07-permissions.sql
-│   ├── 08-atsad-benchmark.sql  # 🆕 ATSAD tables
-│   └── 09-atsad-seed-data.sql  # 🆕 Benchmark datasets & models
-├── frontend/                   # React + CesiumJS (planned)
+├── frontend/
+│   └── src/
+│       ├── components/
+│       │   ├── GlobeView             # Original Cesium globe
+│       │   ├── GlobeViewOptimized    # 🎮 Instanced rendering (10K+ sats)
+│       │   ├── TimelineSlider        # 🎮 Time scrubbing controls
+│       │   ├── TrajectoryRenderer    # 🎮 Orbit path polylines
+│       │   ├── DebrisField           # 💥 Kessler debris particles
+│       │   ├── Header
+│       │   └── Sidebar
+│       ├── hooks/
+│       │   ├── useWebSocket          # 📡 Real-time event stream
+│       │   ├── useTimeController     # 🎮 Playback state
+│       │   └── useSatelliteStore     # 🎮 10K+ object state manager
+│       ├── workers/
+│       │   └── propagation.worker    # 🎮 Web Worker SGP4
+│       └── pages/
+├── infra/                           # 🛠️ Cloud-Native Infrastructure
+│   └── k8s/
+│       ├── namespace.yaml
+│       ├── postgres/statefulset.yaml
+│       ├── redis/deployment.yaml
+│       ├── api/deployment.yaml       # + HPA autoscaling
+│       ├── worker/deployment.yaml
+│       ├── frontend/deployment.yaml
+│       └── ingress.yaml
+├── .github/workflows/
+│   └── ci.yaml                      # 🛠️ CI/CD pipeline
+├── init-db/
+│   ├── 01–09 ...                    # Original schema + seeds
+│   ├── 10-physics-engine.sql        # 🚀 HiFi propagation tables
+│   └── 11-rbac.sql                  # 🔐 RBAC + RLS tables
+├── docker-compose.yml               # DB + Redis + RabbitMQ + API + Worker + Beat + Frontend
 ├── docs/
-├── docker-compose.yml
 └── README.md
 ```
 
