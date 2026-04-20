@@ -117,6 +117,10 @@ app.include_router(graphs.router,            prefix=API_V1)
 # High-Fidelity Physics
 app.include_router(physics.router,           prefix=API_V1)
 
+# WebSockets
+from app.api.routes import websockets
+app.include_router(websockets.router,        prefix=API_V1)
+
 
 @app.get("/", tags=["Health"])
 async def root():
