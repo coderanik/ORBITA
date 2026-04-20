@@ -1,4 +1,4 @@
-import { Activity, Database, Radar, LogOut, Trophy, Clock } from 'lucide-react'
+import { Activity, Database, Radar, LogOut, Trophy, Clock, Bomb, BrainCircuit } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useState, useEffect } from 'react'
@@ -59,6 +59,12 @@ export default function Header() {
           </NavLink>
           <NavLink to="/benchmark" className={navLinkClass}>
             <Trophy className="w-4 h-4" /> Benchmark
+          </NavLink>
+          <NavLink to="/kessler" className={navLinkClass}>
+            <Bomb className="w-4 h-4" /> Kessler Sim
+          </NavLink>
+          <NavLink to="/investigate" className={navLinkClass}>
+            <BrainCircuit className="w-4 h-4" /> AI Agent
           </NavLink>
         </nav>
       </div>
