@@ -125,6 +125,10 @@ app.include_router(websockets.router,        prefix=API_V1)
 from app.api.routes import agents
 app.include_router(agents.router,            prefix=API_V1)
 
+# Kessler Syndrome Simulator
+from app.api.routes import kessler
+app.include_router(kessler.router,           prefix=API_V1)
+
 
 
 @app.get("/", tags=["Health"])
