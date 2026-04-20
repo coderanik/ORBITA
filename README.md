@@ -359,10 +359,11 @@ ORBITA/
 │       └── ingress.yaml
 ├── .github/workflows/
 │   └── ci.yaml                      # 🛠️ CI/CD pipeline
-├── init-db/
-│   ├── 01–09 ...                    # Original schema + seeds
-│   ├── 10-physics-engine.sql        # 🚀 HiFi propagation tables
-│   └── 11-rbac.sql                  # 🔐 RBAC + RLS tables
+├── backend/
+│   ├── db-sql/                  # Original schema + seeds
+│   │   ├── 01–09 ...
+│   │   ├── 10-physics-engine.sql
+│   │   └── 11-rbac.sql
 ├── docker-compose.yml               # DB + Redis + RabbitMQ + API + Worker + Beat + Frontend
 ├── docs/
 └── README.md
