@@ -51,7 +51,7 @@ python-dateutil==2.9.0
 orjson==3.11.6
 ujson==5.11.0
 filelock==3.29.0
-werkzeug==3.1.6
+werkzeug==3.1.8
 pillow==12.1.1
 matplotlib==3.10.0
 pygments==2.20.0
