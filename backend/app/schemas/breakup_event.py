@@ -14,7 +14,8 @@ class BreakupEventBase(BaseModel):
     source: str | None = None
     notes: str | None = None
 
-class BreakupEventCreate(BreakupEventBase): pass
+class BreakupEventCreate(BreakupEventBase):
+    pass
 
 class BreakupEventUpdate(BaseModel):
     fragment_count: int | None = None

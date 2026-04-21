@@ -19,7 +19,8 @@ class ReentryEventBase(BaseModel):
     source: str | None = None
     notes: str | None = None
 
-class ReentryEventCreate(ReentryEventBase): pass
+class ReentryEventCreate(ReentryEventBase):
+    pass
 
 class ReentryEventUpdate(BaseModel):
     actual_time: datetime | None = None

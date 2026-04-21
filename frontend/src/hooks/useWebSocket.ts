@@ -15,7 +15,7 @@ export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const connect = useCallback(() => {
+  const connect = useCallback(function connect() {
     if (wsRef.current?.readyState === WebSocket.OPEN) return
 
     const ws = new WebSocket(WS_BASE)
@@ -38,7 +38,7 @@ export function useWebSocket() {
     ws.onclose = () => {
       setIsConnected(false)
       console.log('[WS] Disconnected. Reconnecting in 5s...')
-      reconnectTimerRef.current = setTimeout(connect, 5000)
+      reconnectTimerRef.current = setTimeout(() => connect(), 5000)
     }
 
     ws.onerror = (err) => {

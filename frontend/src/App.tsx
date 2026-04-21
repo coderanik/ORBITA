@@ -6,7 +6,8 @@ import Login from './pages/Login'
 import Benchmark from './pages/Benchmark'
 import KesslerSimulator from './pages/KesslerSimulator'
 import AIInvestigation from './pages/AIInvestigation'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { AuthProvider } from './contexts/AuthContext'
+import { useAuth } from './contexts/useAuth'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, isLoading } = useAuth()

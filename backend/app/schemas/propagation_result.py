@@ -18,7 +18,8 @@ class PropagationResultBase(BaseModel):
     drag_coefficient: float | None = None
     solar_radiation_pressure: float | None = None
 
-class PropagationResultCreate(PropagationResultBase): pass
+class PropagationResultCreate(PropagationResultBase):
+    pass
 
 class PropagationResultRead(PropagationResultBase):
     model_config = ConfigDict(from_attributes=True)

@@ -8,6 +8,7 @@ Provides a full lifecycle for benchmarking anomaly detection models:
 """
 
 from datetime import datetime, timezone
+from pydantic import BaseModel as PydanticBaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +26,7 @@ from app.schemas.benchmark import (
     ModelCreate, ModelRead, ModelUpdate, ModelList,
     RunCreate, RunRead, RunUpdate, RunList,
     ResultCreate, ResultRead,
-    DetectionEventCreate, DetectionEventBatchCreate, DetectionEventRead,
+    DetectionEventBatchCreate, DetectionEventRead,
     LeaderboardEntry,
 )
 from app.services.atsad_evaluator import evaluate
@@ -263,8 +264,6 @@ async def create_result(payload: ResultCreate, db: AsyncSession = Depends(get_db
 # ══════════════════════════════════════════════════════════════
 #  EVALUATE (compute metrics from predictions)
 # ══════════════════════════════════════════════════════════════
-
-from pydantic import BaseModel as PydanticBaseModel
 
 
 class EvaluateRequest(PydanticBaseModel):

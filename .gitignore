@@ -32,8 +32,10 @@ frontend/build/
 *.bak
 
 
-/init-db
-/docs
 /paper_figures
-/tle_data
+docs
+/.github/workflows/jules.yaml
+
+
+
 

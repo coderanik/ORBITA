@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 from sqlalchemy import (
-    BigInteger, String, Date, Numeric, Text, CheckConstraint, Index, ForeignKey,
+    BigInteger, String, Date, Numeric, CheckConstraint, ForeignKey,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship

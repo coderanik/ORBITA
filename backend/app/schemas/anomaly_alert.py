@@ -15,7 +15,8 @@ class AnomalyAlertBase(BaseModel):
     window_start: datetime | None = None
     window_end: datetime | None = None
 
-class AnomalyAlertCreate(AnomalyAlertBase): pass
+class AnomalyAlertCreate(AnomalyAlertBase):
+    pass
 
 class AnomalyAlertUpdate(BaseModel):
     severity: str | None = None

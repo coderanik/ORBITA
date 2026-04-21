@@ -62,15 +62,20 @@ export default function Benchmark() {
     setLoading(false)
   }
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    const init = async () => {
+      await loadData()
+    }
+    init()
+  }, [])
 
   const fmt = (v: number | undefined | null, decimals = 3) =>
     v != null ? v.toFixed(decimals) : '—'
 
   const sorted = [...entries].sort((a, b) => {
-    const va = (a as any)[sortKey] ?? -Infinity
-    const vb = (b as any)[sortKey] ?? -Infinity
-    return sortAsc ? va - vb : vb - va
+    const va = (a[sortKey as keyof typeof a]) ?? -Infinity
+    const vb = (b[sortKey as keyof typeof b]) ?? -Infinity
+    return sortAsc ? (va as number) - (vb as number) : (vb as number) - (va as number)
   })
 
   const bestScore = entries.length > 0

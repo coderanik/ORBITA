@@ -18,7 +18,8 @@ class TrackingObservationBase(BaseModel):
     visual_magnitude: float | None = None
     quality_flag: str = "GOOD"
 
-class TrackingObservationCreate(TrackingObservationBase): pass
+class TrackingObservationCreate(TrackingObservationBase):
+    pass
 
 class TrackingObservationRead(TrackingObservationBase):
     model_config = ConfigDict(from_attributes=True)

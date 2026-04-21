@@ -69,3 +69,14 @@ export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
 export function getGraphUrl(type: string): string {
   return `${API_BASE_URL}/graphs/${type}`;
 }
+
+export async function fetchRealPositions(): Promise<Record<string, {name: string, lat: number, lon: number, alt: number}>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/real-positions`, { headers: getAuthHeaders() });
+    if (!res.ok) return {};
+    return await res.json();
+  } catch (err) {
+    console.error("Failed to fetch real positions:", err);
+    return {};
+  }
+}

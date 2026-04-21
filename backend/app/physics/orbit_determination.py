@@ -4,7 +4,6 @@ Batch Least-Squares Orbit Determination from ground observations.
 
 import numpy as np
 from scipy.optimize import least_squares
-from astropy.time import Time
 from .propagator import NumericalPropagator
 
 class OrbitDetermination:

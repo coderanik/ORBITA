@@ -80,8 +80,6 @@ def nasa_breakup_model(
             cos_theta,
         ])
         
-        size_class = 'large' if lc > 0.1 else ('medium' if lc > 0.01 else 'small')
-        
         fragments.append(DebrisFragment(
             fragment_id=f"FRAG-{i:04d}",
             characteristic_length_m=float(lc),

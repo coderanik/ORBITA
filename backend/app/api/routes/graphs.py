@@ -76,7 +76,8 @@ async def get_accuracy_loss():
     ax1.plot(epochs, val_acc   * 100, label='Val',   color=_BLUE,  linewidth=2.2, linestyle='--')
     ax1.fill_between(epochs, train_acc * 100, val_acc * 100, alpha=0.07, color=_CYAN)
     ax1.set_title('Accuracy over 50 Epochs', fontsize=12, fontweight='bold', pad=10)
-    ax1.set_xlabel('Epoch'); ax1.set_ylabel('Accuracy (%)')
+    ax1.set_xlabel('Epoch')
+    ax1.set_ylabel('Accuracy (%)')
     ax1.legend(framealpha=0.1, edgecolor='#1e293b')
     ax1.grid(True, alpha=0.3, linestyle='--')
     ax1.annotate('Peak 89.6%', xy=(50, train_acc[-1]*100), xytext=(38, 78),
@@ -87,7 +88,8 @@ async def get_accuracy_loss():
     ax2.plot(epochs, val_loss,   label='Val',   color=_BLUE,  linewidth=2.2, linestyle='--')
     ax2.fill_between(epochs, train_loss, val_loss, alpha=0.07, color=_BLUE)
     ax2.set_title('Loss over 50 Epochs', fontsize=12, fontweight='bold', pad=10)
-    ax2.set_xlabel('Epoch'); ax2.set_ylabel('Loss')
+    ax2.set_xlabel('Epoch')
+    ax2.set_ylabel('Loss')
     ax2.legend(framealpha=0.1, edgecolor='#1e293b')
     ax2.grid(True, alpha=0.3, linestyle='--')
 

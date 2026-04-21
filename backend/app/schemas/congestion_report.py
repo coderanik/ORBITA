@@ -15,7 +15,8 @@ class CongestionReportBase(BaseModel):
     cluster_count: int | None = None
     model_version: str | None = None
 
-class CongestionReportCreate(CongestionReportBase): pass
+class CongestionReportCreate(CongestionReportBase):
+    pass
 
 class CongestionReportRead(CongestionReportBase):
     model_config = ConfigDict(from_attributes=True)

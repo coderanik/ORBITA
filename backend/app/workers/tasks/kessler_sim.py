@@ -7,7 +7,6 @@ Kessler Syndrome Simulator — Celery task that orchestrates:
 5. WebSocket push at each stage
 """
 
-import asyncio
 import numpy as np
 from celery import shared_task
 from astropy.time import Time

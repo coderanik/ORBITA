@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { Shield, Orbit, LogIn, Lock, User as UserIcon, Activity } from 'lucide-react';
 import { API_BASE_URL } from '../api/orbita';
 
@@ -42,8 +42,9 @@ export default function Login() {
       const userData = await userRes.json();
       login(token, userData);
       navigate('/');
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+    } catch (err: unknown) {
+      const error = err as Error
+      setError(error?.message || 'Authentication failed')
     } finally {
       setLoading(false);
     }

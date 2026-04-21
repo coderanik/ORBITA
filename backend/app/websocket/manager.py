@@ -4,8 +4,6 @@ WebSocket connection manager.
 
 from fastapi import WebSocket
 from datetime import datetime, timezone
-import json
-import asyncio
 
 class ConnectionManager:
     def __init__(self):

@@ -2,10 +2,9 @@
 API routes for High-Fidelity Physics Engine (Phase 1).
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 import numpy as np
 from astropy.time import Time
-from astropy import units as u
 
 from app.schemas.physics import (
     HiFiPropagateRequest, HiFiPropagateResponse, ProbabilityRequest, 

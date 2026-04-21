@@ -10,7 +10,8 @@ class DebrisClassificationBase(BaseModel):
     model_version: str | None = None
     features_used: dict | None = None
 
-class DebrisClassificationCreate(DebrisClassificationBase): pass
+class DebrisClassificationCreate(DebrisClassificationBase):
+    pass
 
 class DebrisClassificationUpdate(BaseModel):
     true_label: str | None = None

@@ -18,7 +18,8 @@ class LaunchVehicleBase(BaseModel):
     status: str = "ACTIVE"
     maiden_flight: date | None = None
 
-class LaunchVehicleCreate(LaunchVehicleBase): pass
+class LaunchVehicleCreate(LaunchVehicleBase):
+    pass
 
 class LaunchVehicleRead(LaunchVehicleBase):
     model_config = ConfigDict(from_attributes=True)

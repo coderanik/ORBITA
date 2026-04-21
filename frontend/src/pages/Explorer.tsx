@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Server, Zap, ShieldAlert, GitMerge, FileText, Satellite, Binoculars, Droplet, Flame, ArrowRight, Activity, Search, RefreshCw, Download, Copy, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import Header from '../components/Header'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import { API_BASE_URL } from '../api/orbita'
 
 const EXPLORER_TABS = [
@@ -57,8 +57,8 @@ export default function Explorer() {
   useEffect(() => {
     setPage(0)
     setSearchTerm('')
-    fetchData(0)
-  }, [activeTab])
+    void fetchData(0)
+  }, [activeTab, fetchData])
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage)
