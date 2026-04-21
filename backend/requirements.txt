@@ -47,7 +47,7 @@ langchain-anthropic==1.4.1
 nltk==3.9.4
 
 # ── Utilities ─────────────────────────────────────────────────
-python-dateutil==2.9.0
+python-dateutil==2.9.0.post0
 orjson==3.11.6
 ujson==5.11.0
 filelock==3.29.0
