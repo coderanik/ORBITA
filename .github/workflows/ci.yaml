@@ -60,7 +60,9 @@ jobs:
         run: |
           cd backend
           pip install safety
-          safety check
+          # Using requirements.txt to avoid scanning system-level packages in the runner
+          # Ignoring langchain false positive (88512) and unfixable ujson (89807, 89808)
+          safety check -r requirements.txt --ignore 88512,89807,89808
 
       - name: Run tests
         env:
