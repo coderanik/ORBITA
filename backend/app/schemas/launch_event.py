@@ -14,7 +14,8 @@ class LaunchEventBase(BaseModel):
     flight_number: str | None = None
     notes: str | None = None
 
-class LaunchEventCreate(LaunchEventBase): pass
+class LaunchEventCreate(LaunchEventBase):
+    pass
 
 class LaunchEventRead(LaunchEventBase):
     model_config = ConfigDict(from_attributes=True)

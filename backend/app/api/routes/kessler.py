@@ -2,7 +2,7 @@
 API routes for the Kessler Syndrome Simulator.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 from celery.result import AsyncResult
 from app.workers.tasks.kessler_sim import run_kessler_simulation

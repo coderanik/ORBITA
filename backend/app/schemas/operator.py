@@ -12,7 +12,8 @@ class OperatorBase(BaseModel):
     founded_year: int | None = None
     headquarters: str | None = None
 
-class OperatorCreate(OperatorBase): pass
+class OperatorCreate(OperatorBase):
+    pass
 
 class OperatorRead(OperatorBase):
     model_config = ConfigDict(from_attributes=True)

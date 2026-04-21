@@ -42,6 +42,10 @@ from app.api.routes import (
     # ── Auth ──
     auth,
     tle,
+    # ── WebSockets & Agents ──
+    websockets,
+    agents,
+    kessler,
 )
 
 settings = get_settings()
@@ -119,15 +123,12 @@ app.include_router(graphs.router,            prefix=API_V1)
 app.include_router(physics.router,           prefix=API_V1)
 
 # WebSockets
-from app.api.routes import websockets
 app.include_router(websockets.router,        prefix=API_V1)
 
 # AI Agents
-from app.api.routes import agents
 app.include_router(agents.router,            prefix=API_V1)
 
 # Kessler Syndrome Simulator
-from app.api.routes import kessler
 app.include_router(kessler.router,           prefix=API_V1)
 
 # TLE Positions

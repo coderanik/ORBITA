@@ -18,7 +18,8 @@ class DatasetBase(BaseModel):
     source: str | None = None
     file_path: str | None = None
 
-class DatasetCreate(DatasetBase): pass
+class DatasetCreate(DatasetBase):
+    pass
 
 class DatasetRead(DatasetBase):
     model_config = ConfigDict(from_attributes=True)
@@ -43,7 +44,8 @@ class ModelBase(BaseModel):
     context_strategy: str | None = Field(None, description="ZERO_SHOT, FEW_SHOT, RAG, FINE_TUNED")
     is_baseline: bool = False
 
-class ModelCreate(ModelBase): pass
+class ModelCreate(ModelBase):
+    pass
 
 class ModelUpdate(BaseModel):
     description: str | None = None
@@ -71,7 +73,8 @@ class RunBase(BaseModel):
     config: dict | None = None
     notes: str | None = None
 
-class RunCreate(RunBase): pass
+class RunCreate(RunBase):
+    pass
 
 class RunUpdate(BaseModel):
     status: str | None = None
@@ -125,7 +128,8 @@ class ResultBase(BaseModel):
     channel_metrics: dict | None = None
     confusion_matrix: dict | None = None
 
-class ResultCreate(ResultBase): pass
+class ResultCreate(ResultBase):
+    pass
 
 class ResultRead(ResultBase):
     model_config = ConfigDict(from_attributes=True)
@@ -145,7 +149,8 @@ class DetectionEventBase(BaseModel):
     confidence: float | None = None
     is_correct: bool | None = None
 
-class DetectionEventCreate(DetectionEventBase): pass
+class DetectionEventCreate(DetectionEventBase):
+    pass
 
 class DetectionEventBatchCreate(BaseModel):
     items: list[DetectionEventCreate]

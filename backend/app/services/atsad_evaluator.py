@@ -163,7 +163,6 @@ def compute_alarm_contiguity(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     contiguities = []
     for ts_start, ts_end in true_segments:
         segment_preds = y_pred[ts_start:ts_end + 1]
-        segment_len = ts_end - ts_start + 1
 
         if np.sum(segment_preds) == 0:
             contiguities.append(0.0)

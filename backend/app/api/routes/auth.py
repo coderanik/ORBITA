@@ -12,7 +12,7 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 settings = get_settings()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"/api/v1/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 class Token(BaseModel):
     access_token: str

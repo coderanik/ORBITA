@@ -17,7 +17,7 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             # We mostly push data, but clients can send messages too (e.g., ping/pong or subscriptions)
-            data = await websocket.receive_text()
+            await websocket.receive_text()
             # Echo or process client message if needed
             # await manager.broadcast("CLIENT_MESSAGE", {"message": data})
     except WebSocketDisconnect:

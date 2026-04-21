@@ -48,8 +48,6 @@ def get_atmospheric_density(r_itrs: np.ndarray, epoch: Time) -> float:
     alt_km = r_mag - R_EARTH
     
     # Simple exponential atmosphere fallback if nrlmsise00 fails or for fast eval
-    rho0 = 1.225 # Sea level density kg/m^3
-    H = 8.5 # Scale height km
     if alt_km > 1000:
         return 0.0
     

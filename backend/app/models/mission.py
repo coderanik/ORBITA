@@ -1,7 +1,7 @@
 """SQLAlchemy models for catalog.mission and catalog.mission_object."""
 
 from datetime import date, datetime
-from sqlalchemy import BigInteger, String, Date, Text, ForeignKey, Integer
+from sqlalchemy import BigInteger, String, Date, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base

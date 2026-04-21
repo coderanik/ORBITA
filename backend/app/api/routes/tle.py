@@ -45,7 +45,7 @@ def get_real_positions():
                 "lon": subpoint.longitude.degrees,
                 "alt": alt_km * 1000  # Convert to meters for Cesium
             }
-        except:
+        except Exception:
             continue
     
     return positions

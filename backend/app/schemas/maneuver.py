@@ -13,7 +13,8 @@ class ManeuverBase(BaseModel):
     status: str = "PLANNED"
     notes: str | None = None
 
-class ManeuverCreate(ManeuverBase): pass
+class ManeuverCreate(ManeuverBase):
+    pass
 
 class ManeuverUpdate(BaseModel):
     executed_time: datetime | None = None

@@ -12,7 +12,8 @@ class MissionBase(BaseModel):
     end_date: date | None = None
     status: str = "PLANNED"
 
-class MissionCreate(MissionBase): pass
+class MissionCreate(MissionBase):
+    pass
 
 class MissionUpdate(BaseModel):
     name: str | None = None

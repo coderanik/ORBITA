@@ -1,6 +1,6 @@
 import asyncio
 from celery import shared_task
-from app.services.tle_service import fetch_tle_from_celestrak, parse_tle
+from app.services.tle_service import fetch_tle_from_celestrak
 # In a real setup, we would inject a database session and update the DB
 # from app.core.database import SessionLocal
 
