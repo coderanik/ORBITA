@@ -1,6 +1,6 @@
 import { Activity, Database, Radar, LogOut, Trophy, Clock, Bomb, BrainCircuit } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import { useState, useEffect } from 'react'
 
 export default function Header() {

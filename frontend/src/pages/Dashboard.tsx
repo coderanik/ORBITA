@@ -82,13 +82,16 @@ export default function Dashboard() {
       // Refresh anomalies
       fetchUnacknowledgedAlerts().then(setAnomalies)
     } else if (lastMessage.type === 'TLE_UPDATED') {
-      void fetchPositions()
+      void (async () => { await fetchPositions() })()
     }
   }, [lastMessage, fetchPositions])
 
   useEffect(() => {
-    loadData()
-    fetchPositions()
+    const init = async () => {
+      await loadData()
+      await fetchPositions()
+    }
+    init()
     const interval = setInterval(loadData, 5000)
     const posInterval = setInterval(fetchPositions, 3000)
     return () => {

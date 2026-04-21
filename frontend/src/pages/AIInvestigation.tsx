@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Header from '../components/Header'
 import { API_BASE_URL } from '../api/orbita'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import { BrainCircuit, Send, Loader2, FileText, AlertTriangle } from 'lucide-react'
 
 export default function AIInvestigation() {

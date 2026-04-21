@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Header from '../components/Header'
 import { API_BASE_URL } from '../api/orbita'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import { Bomb, Play, Loader2, AlertTriangle, BarChart3, Satellite, Crosshair, Clock } from 'lucide-react'
 
 interface SimResult {

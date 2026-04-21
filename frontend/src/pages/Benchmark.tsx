@@ -63,7 +63,10 @@ export default function Benchmark() {
   }
 
   useEffect(() => {
-    loadData()
+    const init = async () => {
+      await loadData()
+    }
+    init()
   }, [])
 
   const fmt = (v: number | undefined | null, decimals = 3) =>

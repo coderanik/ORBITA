@@ -1,22 +1,7 @@
-import React, { createContext, useState, useEffect, useContext } from 'react'
+import React, { useState, useEffect } from 'react'
+import { AuthContext, type User } from './useAuth'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1"
-
-interface User {
-  username: string
-  full_name?: string
-  email?: string
-}
-
-interface AuthContextType {
-  token: string | null
-  user: User | null
-  login: (token: string, user: User) => void
-  logout: () => void
-  isLoading: boolean
-}
-
-export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(localStorage.getItem('orbita_token'))
@@ -69,12 +54,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
 }

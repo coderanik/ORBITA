@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { Shield, Orbit, LogIn, Lock, User as UserIcon, Activity } from 'lucide-react';
 import { API_BASE_URL } from '../api/orbita';
 
