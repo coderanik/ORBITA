@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { Cartesian3, Color, PointPrimitiveCollection, NearFarScalar } from 'cesium'
+import { Cartesian3, Color, PointPrimitiveCollection, NearFarScalar, Viewer as CesiumViewer } from 'cesium'
+import type { CesiumComponentRef } from 'resium'
 
 interface DebrisFragment {
   id: string
@@ -11,7 +12,7 @@ interface DebrisFragment {
 
 interface DebrisFieldProps {
   fragments: DebrisFragment[]
-  viewerRef: React.MutableRefObject<any>
+  viewerRef: React.MutableRefObject<CesiumComponentRef<CesiumViewer> | null>
 }
 
 /**
@@ -20,7 +21,7 @@ interface DebrisFieldProps {
  * This component is designed for the Kessler Syndrome Simulator (Phase 7).
  */
 export default function DebrisField({ fragments, viewerRef }: DebrisFieldProps) {
-  const collectionRef = useRef<any>(null)
+  const collectionRef = useRef<PointPrimitiveCollection | null>(null)
 
   useEffect(() => {
     const viewer = viewerRef.current?.cesiumElement

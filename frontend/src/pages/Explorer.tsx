@@ -57,8 +57,8 @@ export default function Explorer() {
   useEffect(() => {
     setPage(0)
     setSearchTerm('')
-    fetchData(0)
-  }, [activeTab])
+    void fetchData(0)
+  }, [activeTab, fetchData])
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage)

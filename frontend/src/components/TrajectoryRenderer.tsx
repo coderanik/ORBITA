@@ -1,12 +1,5 @@
 import { useEffect } from 'react'
-import { Cartesian3 } from 'cesium'
-
-interface TrajectoryPoint {
-  lat: number
-  lon: number
-  alt: number
-  time: number // ms epoch
-}
+import type { TrajectoryPoint } from './trajectoryUtils'
 
 interface TrajectoryRendererProps {
   trajectories: Map<string, TrajectoryPoint[]>
@@ -28,11 +21,4 @@ export default function TrajectoryRenderer({ trajectories, highlightId }: Trajec
   }, [trajectories, highlightId])
 
   return null // Renders via Cesium primitives, not React DOM
-}
-
-/**
- * Utility: Convert a trajectory to Cesium positions.
- */
-export function trajectoryToPositions(points: TrajectoryPoint[]): any[] {
-  return points.map(p => Cartesian3.fromDegrees(p.lon, p.lat, p.alt))
 }

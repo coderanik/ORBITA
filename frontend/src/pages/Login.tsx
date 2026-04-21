@@ -42,8 +42,9 @@ export default function Login() {
       const userData = await userRes.json();
       login(token, userData);
       navigate('/');
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+    } catch (err: unknown) {
+      const error = err as Error
+      setError(error?.message || 'Authentication failed')
     } finally {
       setLoading(false);
     }

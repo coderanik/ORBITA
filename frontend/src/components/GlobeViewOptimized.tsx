@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { Viewer } from 'resium'
 import type { CesiumComponentRef } from 'resium'
-import { Cartesian3, Color, Ion, TileMapServiceImageryProvider, buildModuleUrl, Viewer as CesiumViewer, PointPrimitiveCollection, NearFarScalar } from 'cesium'
+import { Cartesian3, Cartesian2, Color, Ion, TileMapServiceImageryProvider, buildModuleUrl, Viewer as CesiumViewer, PointPrimitiveCollection, NearFarScalar, ScreenSpaceEventHandler, ScreenSpaceEventType } from 'cesium'
 import type { SatellitePosition } from '../hooks/useSatelliteStore'
 import { WifiOff, Layers } from 'lucide-react'
 
@@ -36,7 +36,7 @@ export default function GlobeViewOptimized({
   isPlaying
 }: GlobeViewOptimizedProps) {
   const viewerRef = useRef<CesiumComponentRef<CesiumViewer>>(null)
-  const pointCollectionRef = useRef<any>(null)
+  const pointCollectionRef = useRef<PointPrimitiveCollection | null>(null)
 
   // Replace default Ion imagery with local textures if no token
   useEffect(() => {
@@ -115,15 +115,15 @@ export default function GlobeViewOptimized({
     const viewer = viewerRef.current?.cesiumElement
     if (!viewer) return
 
-    const handler = new (window as any).Cesium.ScreenSpaceEventHandler(viewer.scene.canvas)
-    handler.setInputAction((click: any) => {
-      const picked = viewer.scene.pick(click.position)
+    const handler = new ScreenSpaceEventHandler(viewer.scene.canvas)
+    handler.setInputAction((click: { position: { x: number; y: number } }) => {
+      const picked = viewer.scene.pick(new Cartesian2(click.position.x, click.position.y))
       if (picked?.primitive?.id) {
-        onSelectSatellite(picked.primitive.id)
+        onSelectSatellite(picked.primitive.id as string)
       } else {
         onSelectSatellite(null)
       }
-    }, (window as any).Cesium.ScreenSpaceEventType.LEFT_CLICK)
+    }, ScreenSpaceEventType.LEFT_CLICK)
 
     return () => handler.destroy()
   }, [onSelectSatellite])
@@ -134,7 +134,6 @@ export default function GlobeViewOptimized({
 
   return (
     <div className="flex-1 bg-black relative">
-      {/* @ts-ignore — baseLayer={false} is valid in Cesium >=1.104 */}
       <Viewer
         ref={viewerRef}
         full

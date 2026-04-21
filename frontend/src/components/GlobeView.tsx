@@ -49,7 +49,7 @@ export default function GlobeView({ anomalies, realPositions, selectedAnomaly, s
   const nominalCount = totalSats - anomalies.length
   const critCount = anomalies.filter(a => a.severity === 'CRITICAL' || a.severity === 'RED').length
 
-  const handleSelectedEntityChanged = (entity: any) => {
+  const handleSelectedEntityChanged = (entity: any | null) => {
     if (!entity || !entity.id) { setSelectedAnomaly(null); return }
     const idStr = String(entity.id)
     if (idStr.startsWith('anomaly-')) {
@@ -63,7 +63,6 @@ export default function GlobeView({ anomalies, realPositions, selectedAnomaly, s
 
   return (
     <div className="flex-1 bg-black relative">
-      {/* @ts-ignore — baseLayer={false} is valid in Cesium >=1.104 but not typed in resium */}
       <Viewer
         ref={viewerRef}
         full

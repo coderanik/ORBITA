@@ -44,21 +44,6 @@ export default function Dashboard() {
   // Phase 2: WebSocket connection for real-time streaming
   const { isConnected, lastMessage } = useWebSocket()
 
-  // Process incoming WebSocket messages
-  useEffect(() => {
-    if (!lastMessage) return
-    
-    if (lastMessage.type === 'CONJUNCTION_ALERT') {
-      // Refresh conjunctions when a new alert arrives
-      fetchConjunctionAlerts().then(setConjunctions)
-    } else if (lastMessage.type === 'ANOMALY_DETECTED') {
-      // Refresh anomalies
-      fetchUnacknowledgedAlerts().then(setAnomalies)
-    } else if (lastMessage.type === 'TLE_UPDATED') {
-      fetchPositions()
-    }
-  }, [lastMessage])
-
   const loadData = useCallback(async () => {
     try {
       const [alertsData, statsData, conjData] = await Promise.all([
@@ -85,6 +70,21 @@ export default function Dashboard() {
       setTleError(true)
     }
   }, [])
+
+  // Process incoming WebSocket messages
+  useEffect(() => {
+    if (!lastMessage) return
+    
+    if (lastMessage.type === 'CONJUNCTION_ALERT') {
+      // Refresh conjunctions when a new alert arrives
+      fetchConjunctionAlerts().then(setConjunctions)
+    } else if (lastMessage.type === 'ANOMALY_DETECTED') {
+      // Refresh anomalies
+      fetchUnacknowledgedAlerts().then(setAnomalies)
+    } else if (lastMessage.type === 'TLE_UPDATED') {
+      void fetchPositions()
+    }
+  }, [lastMessage, fetchPositions])
 
   useEffect(() => {
     loadData()
