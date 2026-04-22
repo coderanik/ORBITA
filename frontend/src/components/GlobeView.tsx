@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { Viewer, Entity } from 'resium'
 import type { CesiumComponentRef } from 'resium'
-import { Cartesian3, Color, Ion, TileMapServiceImageryProvider, buildModuleUrl, Viewer as CesiumViewer, Entity as CesiumEntity } from 'cesium'
+import { Cartesian3, Color, Ion, TileMapServiceImageryProvider, buildModuleUrl, Viewer as CesiumViewer, Entity as CesiumEntity, JulianDate } from 'cesium'
 import type { AnomalyAlert } from '../types'
 import { WifiOff } from 'lucide-react'
 
@@ -21,9 +21,20 @@ interface GlobeViewProps {
   setSelectedAnomaly: (anomaly: AnomalyAlert | null) => void;
   tleError?: boolean;
   lastUpdated?: Date | null;
+  currentTime?: Date;
+  hideOverlays?: boolean;
 }
 
-export default function GlobeView({ anomalies, realPositions, selectedAnomaly, setSelectedAnomaly, tleError, lastUpdated }: GlobeViewProps) {
+export default function GlobeView({
+  anomalies,
+  realPositions,
+  selectedAnomaly,
+  setSelectedAnomaly,
+  tleError,
+  lastUpdated,
+  currentTime,
+  hideOverlays = false,
+}: GlobeViewProps) {
   const viewerRef = useRef<CesiumComponentRef<CesiumViewer>>(null);
 
   // Replace the default Ion imagery with local NaturalEarthII textures if no token is set
@@ -40,6 +51,13 @@ export default function GlobeView({ anomalies, realPositions, selectedAnomaly, s
     };
     setupOfflineImagery();
   }, []);
+
+  // Sync the external currentTime with Cesium's internal clock
+  useEffect(() => {
+    if (viewerRef.current?.cesiumElement && currentTime) {
+      viewerRef.current.cesiumElement.clock.currentTime = JulianDate.fromDate(currentTime);
+    }
+  }, [currentTime]);
 
   const allSatIds = new Set<string>()
   Object.keys(realPositions).forEach(k => allSatIds.add(k))
@@ -124,7 +142,7 @@ export default function GlobeView({ anomalies, realPositions, selectedAnomaly, s
       </Viewer>
 
       {/* Top-left overlay */}
-      <div className="absolute top-4 left-4 p-4 rounded-xl backdrop-blur-md bg-slate-950/70 border border-white/10 pointer-events-none space-y-2 min-w-[200px]">
+      {!hideOverlays && <div className="absolute top-4 left-4 p-4 rounded-xl backdrop-blur-md bg-slate-950/70 border border-white/10 pointer-events-none space-y-2 min-w-[200px]">
         <h3 className="text-white/90 font-semibold text-sm tracking-wide">Live Constellation</h3>
         <p className="text-xs text-white/40">TLE-driven orbital tracking</p>
         <div className="pt-2 border-t border-white/5 space-y-1.5">
@@ -150,10 +168,10 @@ export default function GlobeView({ anomalies, realPositions, selectedAnomaly, s
             Updated {lastUpdated.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}
           </p>
         )}
-      </div>
+      </div>}
 
       {/* TLE error badge */}
-      {tleError && (
+      {!hideOverlays && tleError && (
         <div className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/15 border border-amber-500/25 text-amber-400 text-xs backdrop-blur-sm pointer-events-none">
           <WifiOff className="w-3 h-3" />
           TLE service offline — positions approximate
@@ -161,7 +179,7 @@ export default function GlobeView({ anomalies, realPositions, selectedAnomaly, s
       )}
 
       {/* Legend */}
-      <div className="absolute bottom-4 right-4 flex flex-col gap-1.5 px-3 py-2.5 rounded-lg bg-slate-950/70 backdrop-blur-md border border-white/5 pointer-events-none">
+      {!hideOverlays && <div className="absolute bottom-4 right-4 flex flex-col gap-1.5 px-3 py-2.5 rounded-lg bg-slate-950/70 backdrop-blur-md border border-white/5 pointer-events-none">
         <p className="text-[9px] text-slate-500 uppercase tracking-wider font-bold mb-1">Legend</p>
         <div className="flex items-center gap-2 text-[11px] text-slate-300">
           <span className="w-2.5 h-2.5 rounded-full bg-green-400" /> Nominal
@@ -175,7 +193,7 @@ export default function GlobeView({ anomalies, realPositions, selectedAnomaly, s
         <div className="flex items-center gap-2 text-[11px] text-cyan-300">
           <span className="w-3 h-3 rounded-full bg-cyan-400 ring-1 ring-white ring-offset-1 ring-offset-transparent" /> Selected
         </div>
-      </div>
+      </div>}
     </div>
   )
 }
