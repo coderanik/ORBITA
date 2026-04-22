@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.operator import Operator
-from app.schemas.operator import OperatorCreate, OperatorRead, OperatorList
+from app.schemas.operator import OperatorCreate, OperatorRead, OperatorList, OperatorUpdate
 
 router = APIRouter(prefix="/operators", tags=["Operators"])
 
@@ -59,3 +59,33 @@ async def create_operator(payload: OperatorCreate, db: AsyncSession = Depends(ge
     await db.flush()
     await db.refresh(obj)
     return OperatorRead.model_validate(obj)
+
+
+@router.patch("/{operator_id}", response_model=OperatorRead)
+async def update_operator(
+    operator_id: int,
+    payload: OperatorUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update an existing operator."""
+    result = await db.execute(select(Operator).where(Operator.operator_id == operator_id))
+    obj = result.scalar_one_or_none()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Operator not found")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(obj, field, value)
+
+    await db.flush()
+    await db.refresh(obj)
+    return OperatorRead.model_validate(obj)
+
+
+@router.delete("/{operator_id}", status_code=204)
+async def delete_operator(operator_id: int, db: AsyncSession = Depends(get_db)):
+    """Delete an operator record."""
+    result = await db.execute(select(Operator).where(Operator.operator_id == operator_id))
+    obj = result.scalar_one_or_none()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Operator not found")
+    await db.delete(obj)

@@ -23,6 +23,8 @@ from app.models.benchmark import (
     BenchmarkResult,
     DetectionEvent,
 )
+from app.models.auth_user import AuthUser
+from app.models.auth_api_key import AuthApiKey
 
 __all__ = [
     "Operator",
@@ -49,4 +51,6 @@ __all__ = [
     "BenchmarkRun",
     "BenchmarkResult",
     "DetectionEvent",
+    "AuthUser",
+    "AuthApiKey",
 ]

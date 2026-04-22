@@ -75,3 +75,13 @@ async def update_mission(
     await db.flush()
     await db.refresh(obj)
     return MissionRead.model_validate(obj)
+
+
+@router.delete("/{mission_id}", status_code=204)
+async def delete_mission(mission_id: int, db: AsyncSession = Depends(get_db)):
+    """Delete a mission."""
+    result = await db.execute(select(Mission).where(Mission.mission_id == mission_id))
+    obj = result.scalar_one_or_none()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    await db.delete(obj)

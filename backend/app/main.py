@@ -12,6 +12,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
+from app.core.database import async_session
+from app.auth.bootstrap import ensure_default_admin
 from app.api.routes import (
     space_objects,
     orbits,
@@ -57,6 +59,8 @@ async def lifespan(app: FastAPI):
     # ── startup ──
     print(f"  ORBITA-ATSAD v{settings.APP_VERSION} starting ({settings.ENVIRONMENT})")
     print(f"  Database: {settings.DATABASE_URL[:50]}...")
+    async with async_session() as session:
+        await ensure_default_admin(session)
     yield
     # ── shutdown ──
     print("  ORBITA-ATSAD shutting down")
