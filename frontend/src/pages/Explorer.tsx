@@ -91,7 +91,7 @@ export default function Explorer() {
   }
 
   return (
-    <div className="h-screen w-full flex flex-col bg-[#04060b] text-slate-200 overflow-hidden font-['Inter'] selection:bg-blue-500/30">
+    <div className="h-screen w-full flex flex-col bg-[#04060b] text-slate-200 overflow-hidden font-['Inter'] selection:bg-blue-500/30 pt-[4.5rem]">
       <Header />
 
       <div className="flex-1 flex overflow-hidden relative">

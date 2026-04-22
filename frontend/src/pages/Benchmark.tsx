@@ -92,7 +92,7 @@ export default function Benchmark() {
   }
 
   return (
-    <div className="h-screen w-full flex flex-col bg-[#04060b] text-slate-200 overflow-hidden font-['Inter']">
+    <div className="h-screen w-full flex flex-col bg-[#04060b] text-slate-200 overflow-hidden font-['Inter'] pt-[4.5rem]">
       <Header />
 
       <div className="flex-1 overflow-auto custom-scrollbar">
