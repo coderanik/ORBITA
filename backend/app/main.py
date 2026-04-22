@@ -48,6 +48,7 @@ from app.api.routes import (
     websockets,
     agents,
     kessler,
+    system_ops,
 )
 
 settings = get_settings()
@@ -134,6 +135,9 @@ app.include_router(agents.router,            prefix=API_V1)
 
 # Kessler Syndrome Simulator
 app.include_router(kessler.router,           prefix=API_V1)
+
+# System operations
+app.include_router(system_ops.router,        prefix=API_V1)
 
 # TLE Positions
 app.include_router(tle.router,               prefix=API_V1)
