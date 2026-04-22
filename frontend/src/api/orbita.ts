@@ -80,3 +80,62 @@ export async function fetchRealPositions(): Promise<Record<string, {name: string
     return {};
   }
 }
+
+export interface SystemOpsStatus {
+  generated_at: string
+  api: { ok: boolean }
+  celery: {
+    ok: boolean
+    online_workers: string[]
+    worker_count: number
+    error?: string
+  }
+  redis: {
+    ok: boolean
+    db_size: number | null
+    used_memory_human: string | null
+    error?: string
+  }
+  rabbitmq: {
+    ok: boolean
+    queue_count: number
+    messages_ready_total: number | null
+    messages_unacked_total: number | null
+    error?: string
+  }
+}
+
+export async function fetchSystemOpsStatus(): Promise<SystemOpsStatus | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/system-ops/status`, { headers: getAuthHeaders() })
+    if (!res.ok) return null
+    return await res.json()
+  } catch (err) {
+    console.error("Failed to fetch system ops status:", err)
+    return null
+  }
+}
+
+export interface UserLoginActivity {
+  user_id: number
+  username: string
+  email_masked: string | null
+  role: string
+  is_active: boolean
+  latest_logged_in_at: string | null
+  timezone_name: string | null
+  timezone_offset_minutes: number | null
+  ip_fingerprint: string | null
+}
+
+export async function fetchUsersActivity(): Promise<UserLoginActivity[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/system-ops/users-activity`, { headers: getAuthHeaders() })
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.items ?? []
+  } catch (err) {
+    console.error("Failed to fetch users activity:", err)
+    return []
+  }
+}
