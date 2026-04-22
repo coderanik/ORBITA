@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.models.space_object import SpaceObject
 from app.models.anomaly_alert import AnomalyAlert
-from app.models.conjunction import Conjunction
+from app.models.conjunction import ConjunctionEvent
 
 class ReportGenerator:
     """Service to generate mission and anomaly reports in PDF format."""
@@ -29,8 +29,8 @@ class ReportGenerator:
             select(func.count()).select_from(AnomalyAlert).where(AnomalyAlert.object_id == object_id)
         )
         conj_count = await self.db.execute(
-            select(func.count()).select_from(Conjunction).where(
-                (Conjunction.object1_id == object_id) | (Conjunction.object2_id == object_id)
+            select(func.count()).select_from(ConjunctionEvent).where(
+                (ConjunctionEvent.primary_object_id == object_id) | (ConjunctionEvent.secondary_object_id == object_id)
             )
         )
 
