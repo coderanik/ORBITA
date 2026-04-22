@@ -2,8 +2,8 @@
 Main ReAct Agent orchestrator.
 """
 
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain_core.prompts import ChatPromptTemplate
+from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
 from .config import get_llm
 from .prompts import AGENT_SYSTEM_PROMPT
 from .tools.db_query import query_telemetry, query_space_weather
@@ -22,36 +22,30 @@ class OrbitalAnomalyAgent:
             generate_report
         ]
         
-        # Create prompt
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system", AGENT_SYSTEM_PROMPT),
-            ("human", "{input}"),
-            ("placeholder", "{agent_scratchpad}")
-        ])
-        
-        # Construct the tool calling agent
-        self.agent = create_tool_calling_agent(self.llm, self.tools, self.prompt)
-        
-        # Create an agent executor
-        self.agent_executor = AgentExecutor(
-            agent=self.agent, 
+        # Construct the tool calling agent using the new factory
+        self.agent = create_agent(
+            model=self.llm, 
             tools=self.tools, 
-            verbose=True,
-            return_intermediate_steps=True
+            system_prompt=AGENT_SYSTEM_PROMPT
         )
 
     async def investigate(self, alert_id: int) -> str:
         """
-        Runs the full autonomous investigation.
+        Runs the full autonomous investigation using the compiled agent graph.
         """
         try:
-            result = await self.agent_executor.ainvoke({
-                "input": f"Investigate anomaly alert ID {alert_id}. Provide a final incident report."
+            # The new create_agent factory uses a graph-based state.
+            # We pass the input as a dictionary.
+            result = await self.agent.ainvoke({
+                "messages": [HumanMessage(content=f"Investigate anomaly alert ID {alert_id}. Provide a final incident report.")]
             })
             
-            # The agent should ideally call the `generate_report` tool, 
-            # but if it just outputs the text, we return that.
-            return result.get("output", "Failed to generate report.")
+            # The result is the final state of the graph.
+            # We extract the last message content or the output field if available.
+            messages = result.get("messages", [])
+            if messages:
+                return messages[-1].content
+            return "Failed to generate report."
             
         except Exception as e:
             return f"Agent execution failed: {str(e)}"
