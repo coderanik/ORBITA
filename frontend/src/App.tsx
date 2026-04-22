@@ -46,6 +46,15 @@ function App() {
           <Route path="/kessler" element={<ProtectedRoute><KesslerSimulator /></ProtectedRoute>} />
           <Route path="/investigate" element={<ProtectedRoute><AIInvestigation /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/admin/catalog/space-objects" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/admin/catalog/operators" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/admin/catalog/missions" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/admin/catalog/ground-stations" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/admin/catalog/launch-vehicles" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/admin/events/conjunctions" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/admin/tle" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/admin/atsad" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
