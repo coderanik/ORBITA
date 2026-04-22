@@ -7,11 +7,26 @@ import Benchmark from './pages/Benchmark'
 import KesslerSimulator from './pages/KesslerSimulator'
 import AIInvestigation from './pages/AIInvestigation'
 import Admin from './pages/Admin'
+import SystemOps from './pages/SystemOps'
 import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './contexts/useAuth'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { token, isLoading } = useAuth()
+type Role = 'viewer' | 'operator' | 'admin' | 'superadmin'
+
+function roleLandingPath(role?: string): string {
+  if (role === 'admin') return '/admin'
+  if (role === 'superadmin') return '/superadmin'
+  return '/'
+}
+
+function ProtectedRoute({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactNode
+  allowedRoles?: Role[]
+}) {
+  const { token, user, isLoading } = useAuth()
 
   if (isLoading) {
     return (
@@ -31,6 +46,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />
   }
 
+  if (allowedRoles && !allowedRoles.includes((user?.role as Role) ?? 'viewer')) {
+    return <Navigate to={roleLandingPath(user?.role)} replace />
+  }
+
   return <>{children}</>
 }
 
@@ -40,21 +59,22 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/explorer" element={<ProtectedRoute><Explorer /></ProtectedRoute>} />
-          <Route path="/benchmark" element={<ProtectedRoute><Benchmark /></ProtectedRoute>} />
-          <Route path="/kessler" element={<ProtectedRoute><KesslerSimulator /></ProtectedRoute>} />
-          <Route path="/investigate" element={<ProtectedRoute><AIInvestigation /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          <Route path="/admin/catalog/space-objects" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          <Route path="/admin/catalog/operators" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          <Route path="/admin/catalog/missions" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          <Route path="/admin/catalog/ground-stations" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          <Route path="/admin/catalog/launch-vehicles" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          <Route path="/admin/users" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          <Route path="/admin/events/conjunctions" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          <Route path="/admin/tle" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          <Route path="/admin/atsad" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute allowedRoles={['viewer', 'operator', 'admin', 'superadmin']}><Dashboard /></ProtectedRoute>} />
+          <Route path="/explorer" element={<ProtectedRoute allowedRoles={['operator', 'admin', 'superadmin']}><Explorer /></ProtectedRoute>} />
+          <Route path="/benchmark" element={<ProtectedRoute allowedRoles={['operator', 'admin', 'superadmin']}><Benchmark /></ProtectedRoute>} />
+          <Route path="/kessler" element={<ProtectedRoute allowedRoles={['viewer', 'operator', 'admin', 'superadmin']}><KesslerSimulator /></ProtectedRoute>} />
+          <Route path="/investigate" element={<ProtectedRoute allowedRoles={['operator', 'admin', 'superadmin']}><AIInvestigation /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
+          <Route path="/admin/catalog/space-objects" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
+          <Route path="/admin/catalog/operators" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
+          <Route path="/admin/catalog/missions" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
+          <Route path="/admin/catalog/ground-stations" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
+          <Route path="/admin/catalog/launch-vehicles" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
+          <Route path="/admin/events/conjunctions" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
+          <Route path="/admin/tle" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
+          <Route path="/admin/atsad" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
+          <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']}><SystemOps /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
