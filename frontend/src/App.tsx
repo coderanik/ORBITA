@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Benchmark from './pages/Benchmark'
 import KesslerSimulator from './pages/KesslerSimulator'
 import AIInvestigation from './pages/AIInvestigation'
+import Admin from './pages/Admin'
 import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './contexts/useAuth'
 
@@ -44,6 +45,7 @@ function App() {
           <Route path="/benchmark" element={<ProtectedRoute><Benchmark /></ProtectedRoute>} />
           <Route path="/kessler" element={<ProtectedRoute><KesslerSimulator /></ProtectedRoute>} />
           <Route path="/investigate" element={<ProtectedRoute><AIInvestigation /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

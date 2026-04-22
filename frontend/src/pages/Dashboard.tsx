@@ -2,31 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import Header from '../components/Header'
 import Sidebar from '../components/Sidebar'
 import GlobeView from '../components/GlobeView'
-import TimelineSlider from '../components/TimelineSlider'
 import { useTimeController } from '../hooks/useTimeController'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { fetchUnacknowledgedAlerts, fetchPlatformStats, fetchConjunctionAlerts, fetchRealPositions } from '../api/orbita'
 import type { AnomalyAlert, PlatformStats, ConjunctionAlert } from '../types'
-import { WifiOff, RefreshCw, Globe, AlertTriangle, Zap, Layers, Radio } from 'lucide-react'
+import { WifiOff, RefreshCw } from 'lucide-react'
 
-function KpiCard({
-  label, value, sub, icon: Icon, color, pulse
-}: { label: string; value: string; sub?: string; icon: React.ElementType; color: string; pulse?: boolean }) {
-  return (
-    <div className={`flex-1 min-w-0 p-4 rounded-2xl border ${color} bg-gradient-to-br from-slate-900/60 to-slate-800/30 backdrop-blur-sm relative overflow-hidden group hover:scale-[1.02] transition-transform duration-200`}>
-      <div className="flex items-start justify-between mb-3">
-        <div className={`p-2 rounded-xl bg-gradient-to-br ${color.replace('border-', 'from-').replace('/20', '/20')} from-slate-800 to-slate-700 border border-white/5`}>
-          <Icon className="w-4 h-4 opacity-80" />
-        </div>
-        {pulse && <span className="w-2 h-2 rounded-full bg-current animate-pulse opacity-60" />}
-      </div>
-      <div className="text-2xl font-bold text-white tabular-nums tracking-tight">{value}</div>
-      <div className="text-xs text-slate-400 mt-1 font-medium">{label}</div>
-      {sub && <div className="text-[10px] text-slate-500 mt-0.5">{sub}</div>}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none rounded-2xl" />
-    </div>
-  )
-}
+
 
 export default function Dashboard() {
   const [anomalies, setAnomalies] = useState<AnomalyAlert[]>([])
@@ -42,7 +24,7 @@ export default function Dashboard() {
   const timeController = useTimeController()
 
   // Phase 2: WebSocket connection for real-time streaming
-  const { isConnected, lastMessage } = useWebSocket()
+  const { lastMessage } = useWebSocket()
 
   const loadData = useCallback(async () => {
     try {
@@ -104,16 +86,10 @@ export default function Dashboard() {
     setAnomalies(prev => prev.filter(a => a.alert_id !== alertId))
   }
 
-  const critCount = anomalies.filter(a => a.severity === 'CRITICAL' || a.severity === 'RED').length
-  const orbitClasses = stats ? Object.keys(stats.objects_by_orbit_class).length : 0
 
-  // Timeline epoch range: 12 hours around now
-  const now = new Date()
-  const epochStart = new Date(now.getTime() - 6 * 60 * 60 * 1000)
-  const epochEnd = new Date(now.getTime() + 6 * 60 * 60 * 1000)
 
   return (
-    <div className="h-screen w-full flex flex-col bg-[#04060b] text-slate-200 overflow-hidden">
+    <div className="h-screen w-full flex flex-col bg-[#04060b] text-slate-200 overflow-hidden pt-[4.5rem]">
       <Header />
 
       {/* Backend error banner */}
@@ -141,47 +117,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* KPI Strip */}
-      <div className="shrink-0 flex gap-3 px-6 py-3 border-b border-white/[0.06] bg-[#04060b]">
-        <KpiCard
-          label="Tracked Objects"
-          value={stats ? stats.total_tracked_objects.toLocaleString() : '—'}
-          sub="Live from ORBITA API"
-          icon={Globe}
-          color="border-blue-500/20 text-blue-400"
-          pulse
-        />
-        <KpiCard
-          label="Unresolved Alerts"
-          value={anomalies.length.toString()}
-          sub={critCount > 0 ? `${critCount} critical` : 'All nominal'}
-          icon={AlertTriangle}
-          color={critCount > 0 ? "border-red-500/30 text-red-400" : "border-slate-700 text-slate-400"}
-          pulse={critCount > 0}
-        />
-        <KpiCard
-          label="Conjunction Events"
-          value={conjunctions.length.toString()}
-          sub="High+ risk only"
-          icon={Zap}
-          color={conjunctions.length > 0 ? "border-orange-500/25 text-orange-400" : "border-slate-700 text-slate-400"}
-        />
-        <KpiCard
-          label="Orbit Classes"
-          value={orbitClasses.toString()}
-          sub="Unique orbital regimes"
-          icon={Layers}
-          color="border-purple-500/20 text-purple-400"
-        />
-        {/* WebSocket status indicator */}
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl border ${isConnected ? 'border-emerald-500/20 text-emerald-400' : 'border-red-500/20 text-red-400'} bg-gradient-to-br from-slate-900/60 to-slate-800/30 min-w-[120px]`}>
-          <Radio className={`w-4 h-4 ${isConnected ? 'animate-pulse' : ''}`} />
-          <div>
-            <div className="text-xs font-bold">{isConnected ? 'LIVE' : 'OFFLINE'}</div>
-            <div className="text-[10px] opacity-60">WebSocket</div>
-          </div>
-        </div>
-      </div>
+
 
       {/* Main content */}
       <div className="flex-1 flex relative overflow-hidden">
@@ -201,11 +137,12 @@ export default function Dashboard() {
           setSelectedAnomaly={setSelectedAnomaly}
           tleError={tleError}
           lastUpdated={lastUpdated}
+          currentTime={timeController.currentTime}
         />
       </div>
 
       {/* Phase 4: Timeline Slider */}
-      <TimelineSlider
+      {/* <TimelineSlider
         startEpoch={epochStart}
         endEpoch={epochEnd}
         currentTime={timeController.currentTime}
@@ -218,7 +155,7 @@ export default function Dashboard() {
         onJumpForward={timeController.jumpForward}
         onJumpBackward={timeController.jumpBackward}
         events={conjunctions}
-      />
+      /> */}
     </div>
   )
 }

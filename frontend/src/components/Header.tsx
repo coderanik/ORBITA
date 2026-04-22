@@ -1,4 +1,4 @@
-import { Activity, Database, Radar, LogOut, Trophy, Clock, Bomb, BrainCircuit } from 'lucide-react'
+import { Activity, Database, Radar, LogOut, Trophy, Clock, Bomb, BrainCircuit, Shield } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/useAuth'
 import { useState, useEffect } from 'react'
@@ -31,9 +31,9 @@ export default function Header() {
     }`
 
   return (
-    <header className="h-14 shrink-0 border-b border-white/10 flex items-center px-6 justify-between bg-slate-950/90 backdrop-blur-xl z-50 relative">
-      {/* Left gradient accent */}
-      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-blue-500/50 via-cyan-400/30 to-transparent" />
+    <header className="fixed top-3 left-4 right-4 h-14 flex items-center px-6 justify-between bg-slate-950/70 backdrop-blur-2xl z-50 rounded-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.03)] ring-1 ring-white/[0.05]">
+      {/* Top gradient accent */}
+      <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent rounded-full" />
 
       <div className="flex items-center gap-8">
         {/* Logo */}
@@ -65,6 +65,9 @@ export default function Header() {
           </NavLink>
           <NavLink to="/investigate" className={navLinkClass}>
             <BrainCircuit className="w-4 h-4" /> AI Agent
+          </NavLink>
+          <NavLink to="/admin" className={navLinkClass}>
+            <Shield className="w-4 h-4" /> Admin
           </NavLink>
         </nav>
       </div>

@@ -135,9 +135,19 @@ docker compose up -d
 | **API Docs (ReDoc)** | http://localhost:8000/redoc |
 | **pgAdmin** | http://localhost:8080 |
 | **Health Check** | http://localhost:8000/health |
+| **Admin CRUD UI** | http://localhost:5173/admin |
 
 pgAdmin credentials: `admin@orbita.dev` / `admin123`
 Add server: host=`orbita-db`, port=`5432`, db=`orbita_registry`, user=`orbita_admin`
+
+### 2.1 Database Migrations (Alembic)
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+Alembic migrations now live in `backend/alembic/`, with a baseline revision for existing SQL-managed schema and incremental revisions for new changes.
 
 ### 3. API Endpoints
 
