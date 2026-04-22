@@ -1,7 +1,7 @@
 """Endpoints for ground stations."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, text, func
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -67,9 +67,6 @@ async def create_ground_station(
         min_elevation_deg=payload.min_elevation_deg,
         capabilities=payload.capabilities,
         is_active=payload.is_active,
-        org_id=current_user.get("org_id"),
-        created_by=current_user.get("user_id"),
-        updated_by=current_user.get("user_id"),
     )
     db.add(station)
     await db.flush()
@@ -110,7 +107,6 @@ async def update_ground_station(
     for field in ("name", "country_code", "operator", "station_type", "frequency_bands", "antenna_diameter_m", "min_elevation_deg", "capabilities", "is_active"):
         if field in update_data:
             setattr(station, field, update_data[field])
-    station.updated_by = current_user.get("user_id")
 
     if has_location_update:
         lon = update_data.get("longitude")
@@ -146,6 +142,4 @@ async def delete_ground_station(
     station = result.scalar_one_or_none()
     if not station:
         raise HTTPException(status_code=404, detail="Ground station not found")
-    station.is_deleted = True
-    station.deleted_at = func.now()
-    station.updated_by = current_user.get("user_id")
+    await db.delete(station)
