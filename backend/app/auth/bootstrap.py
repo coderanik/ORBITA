@@ -19,9 +19,9 @@ async def ensure_default_admin(session) -> None:
         await session.flush()
 
     existing_admin = await session.execute(
-        select(AuthUser).where(AuthUser.role.in_(["admin", "superadmin"]))
+        select(AuthUser).where(AuthUser.role.in_(["admin", "superadmin"])).order_by(AuthUser.user_id.asc())
     )
-    admin_user = existing_admin.scalar_one_or_none()
+    admin_user = existing_admin.scalars().first()
     if admin_user:
         if admin_user.org_id is None:
             admin_user.org_id = org.org_id
