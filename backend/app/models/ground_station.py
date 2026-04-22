@@ -23,6 +23,11 @@ class GroundStation(Base):
     min_elevation_deg: Mapped[float | None] = mapped_column(Numeric(5, 2), default=5.0)
     capabilities: Mapped[dict | None] = mapped_column(JSONB, default={})
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    org_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    created_by: Mapped[int | None] = mapped_column(BigInteger)
+    updated_by: Mapped[int | None] = mapped_column(BigInteger)
+    deleted_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+    is_deleted: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default="now()")
 
     operator_ref = relationship("Operator", back_populates="ground_stations")

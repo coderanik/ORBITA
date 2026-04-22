@@ -1,10 +1,12 @@
 """Endpoints for ground stations."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, text
+from sqlalchemy import select, text, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.auth.dependencies import get_current_user
+from app.auth.scoping import enforce_org_scope
 from app.models.ground_station import GroundStation
 from app.schemas.ground_station import GroundStationCreate, GroundStationRead, GroundStationUpdate
 
@@ -16,9 +18,10 @@ async def list_ground_stations(
     active_only: bool = Query(True),
     station_type: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """List all ground stations."""
-    query = select(GroundStation)
+    query = enforce_org_scope(select(GroundStation), GroundStation, current_user)
     if active_only:
         query = query.where(GroundStation.is_active.is_(True))
     if station_type:
@@ -30,11 +33,16 @@ async def list_ground_stations(
 
 
 @router.get("/{station_id}", response_model=GroundStationRead)
-async def get_ground_station(station_id: int, db: AsyncSession = Depends(get_db)):
+async def get_ground_station(
+    station_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     """Get a single ground station."""
-    result = await db.execute(
-        select(GroundStation).where(GroundStation.station_id == station_id)
+    query = enforce_org_scope(select(GroundStation), GroundStation, current_user).where(
+        GroundStation.station_id == station_id
     )
+    result = await db.execute(query)
     station = result.scalar_one_or_none()
     if not station:
         raise HTTPException(status_code=404, detail="Ground station not found")
@@ -45,6 +53,7 @@ async def get_ground_station(station_id: int, db: AsyncSession = Depends(get_db)
 async def create_ground_station(
     payload: GroundStationCreate,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """Register a new ground station (location via lat/lon/alt)."""
     # Build the station, inserting location via raw PostGIS function
@@ -58,6 +67,9 @@ async def create_ground_station(
         min_elevation_deg=payload.min_elevation_deg,
         capabilities=payload.capabilities,
         is_active=payload.is_active,
+        org_id=current_user.get("org_id"),
+        created_by=current_user.get("user_id"),
+        updated_by=current_user.get("user_id"),
     )
     db.add(station)
     await db.flush()
@@ -80,9 +92,13 @@ async def update_ground_station(
     station_id: int,
     payload: GroundStationUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """Update a ground station, including optional geospatial position."""
-    result = await db.execute(select(GroundStation).where(GroundStation.station_id == station_id))
+    query = enforce_org_scope(select(GroundStation), GroundStation, current_user).where(
+        GroundStation.station_id == station_id
+    )
+    result = await db.execute(query)
     station = result.scalar_one_or_none()
     if not station:
         raise HTTPException(status_code=404, detail="Ground station not found")
@@ -94,6 +110,7 @@ async def update_ground_station(
     for field in ("name", "country_code", "operator", "station_type", "frequency_bands", "antenna_diameter_m", "min_elevation_deg", "capabilities", "is_active"):
         if field in update_data:
             setattr(station, field, update_data[field])
+    station.updated_by = current_user.get("user_id")
 
     if has_location_update:
         lon = update_data.get("longitude")
@@ -116,10 +133,19 @@ async def update_ground_station(
 
 
 @router.delete("/{station_id}", status_code=204)
-async def delete_ground_station(station_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_ground_station(
+    station_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     """Delete a ground station record."""
-    result = await db.execute(select(GroundStation).where(GroundStation.station_id == station_id))
+    query = enforce_org_scope(select(GroundStation), GroundStation, current_user).where(
+        GroundStation.station_id == station_id
+    )
+    result = await db.execute(query)
     station = result.scalar_one_or_none()
     if not station:
         raise HTTPException(status_code=404, detail="Ground station not found")
-    await db.delete(station)
+    station.is_deleted = True
+    station.deleted_at = func.now()
+    station.updated_by = current_user.get("user_id")

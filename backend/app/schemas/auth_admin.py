@@ -60,3 +60,17 @@ class ApiKeyRead(BaseModel):
 class ApiKeyIssueResponse(BaseModel):
     api_key: str
     key_info: ApiKeyRead
+
+
+class OrganizationCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=200)
+    slug: str = Field(min_length=2, max_length=100)
+
+
+class OrganizationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    org_id: int
+    name: str
+    slug: str
+    created_at: datetime

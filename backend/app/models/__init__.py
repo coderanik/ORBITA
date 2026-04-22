@@ -25,6 +25,8 @@ from app.models.benchmark import (
 )
 from app.models.auth_user import AuthUser
 from app.models.auth_api_key import AuthApiKey
+from app.models.auth_organization import AuthOrganization
+from app.models.auth_membership import AuthMembership
 
 __all__ = [
     "Operator",
@@ -53,4 +55,6 @@ __all__ = [
     "DetectionEvent",
     "AuthUser",
     "AuthApiKey",
+    "AuthOrganization",
+    "AuthMembership",
 ]

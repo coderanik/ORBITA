@@ -12,6 +12,8 @@ from app.auth.jwt_handler import create_access_token
 from app.auth.security import get_password_hash, hash_api_key, verify_password
 from app.core.database import get_db
 from app.models.auth_api_key import AuthApiKey
+from app.models.auth_membership import AuthMembership
+from app.models.auth_organization import AuthOrganization
 from app.models.auth_user import AuthUser
 from app.schemas.auth_admin import (
     ApiKeyCreate,
@@ -21,6 +23,8 @@ from app.schemas.auth_admin import (
     AuthUserList,
     AuthUserRead,
     AuthUserUpdate,
+    OrganizationCreate,
+    OrganizationRead,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -135,6 +139,8 @@ async def create_user(
     )
     db.add(user)
     await db.flush()
+    if payload.org_id is not None:
+        db.add(AuthMembership(user_id=user.user_id, org_id=payload.org_id, role=payload.role))
     await db.refresh(user)
     return AuthUserRead.model_validate(user)
 
@@ -160,6 +166,25 @@ async def update_user(
     for field, value in update_data.items():
         setattr(user, field, value)
     user.updated_at = datetime.now(timezone.utc)
+
+    if payload.org_id is not None:
+        membership = (
+            await db.execute(
+                select(AuthMembership).where(
+                    AuthMembership.user_id == user.user_id, AuthMembership.org_id == payload.org_id
+                )
+            )
+        ).scalar_one_or_none()
+        if membership:
+            membership.role = payload.role or membership.role
+        else:
+            db.add(
+                AuthMembership(
+                    user_id=user.user_id,
+                    org_id=payload.org_id,
+                    role=payload.role or user.role,
+                )
+            )
 
     await db.flush()
     await db.refresh(user)
@@ -216,3 +241,28 @@ async def revoke_api_key(
     key.is_active = False
     key.last_used_at = datetime.now(timezone.utc)
     await db.flush()
+
+
+@router.get("/organizations", response_model=list[OrganizationRead])
+async def list_organizations(
+    _: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(AuthOrganization).order_by(AuthOrganization.org_id))
+    return [OrganizationRead.model_validate(item) for item in result.scalars().all()]
+
+
+@router.post("/organizations", response_model=OrganizationRead, status_code=201)
+async def create_organization(
+    payload: OrganizationCreate,
+    _: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    exists = await db.execute(select(AuthOrganization).where(AuthOrganization.slug == payload.slug))
+    if exists.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Organization slug already exists")
+    org = AuthOrganization(name=payload.name, slug=payload.slug)
+    db.add(org)
+    await db.flush()
+    await db.refresh(org)
+    return OrganizationRead.model_validate(org)
