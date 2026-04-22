@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import Header from '../components/Header'
 import { API_BASE_URL } from '../api/orbita'
 import { useAuth } from '../contexts/useAuth'
+import { Satellite, Building2, Rocket, Radio, Car, Users, AlertTriangle, Upload, Database, Cpu, Play, Search, Plus, RefreshCw, Pencil, Trash2, X, Check, Key, ArrowRight } from 'lucide-react'
 
 type SectionKey =
   | 'catalog-space-objects'
@@ -17,18 +18,18 @@ type SectionKey =
   | 'atsad-models'
   | 'atsad-runs'
 
-const SECTION_ORDER: { key: SectionKey; label: string; path: string }[] = [
-  { key: 'catalog-space-objects', label: 'Catalog · Space Objects', path: '/admin/catalog/space-objects' },
-  { key: 'catalog-operators', label: 'Catalog · Operators', path: '/admin/catalog/operators' },
-  { key: 'catalog-missions', label: 'Catalog · Missions', path: '/admin/catalog/missions' },
-  { key: 'catalog-ground-stations', label: 'Catalog · Ground Stations', path: '/admin/catalog/ground-stations' },
-  { key: 'catalog-launch-vehicles', label: 'Catalog · Launch Vehicles', path: '/admin/catalog/launch-vehicles' },
-  { key: 'users', label: 'Users & API Keys', path: '/admin/users' },
-  { key: 'events-conjunctions', label: 'Events · Conjunctions', path: '/admin/events/conjunctions' },
-  { key: 'tle', label: 'Operations · Manual TLE Ingest', path: '/admin/tle' },
-  { key: 'atsad-datasets', label: 'ATSAD · Datasets', path: '/admin/atsad?tab=datasets' },
-  { key: 'atsad-models', label: 'ATSAD · Models', path: '/admin/atsad?tab=models' },
-  { key: 'atsad-runs', label: 'ATSAD · Runs', path: '/admin/atsad?tab=runs' },
+const SECTION_ORDER: { key: SectionKey; label: string; path: string; icon: React.ElementType; group: string }[] = [
+  { key: 'catalog-space-objects', label: 'Space Objects', path: '/admin/catalog/space-objects', icon: Satellite, group: 'Catalog' },
+  { key: 'catalog-operators', label: 'Operators', path: '/admin/catalog/operators', icon: Building2, group: 'Catalog' },
+  { key: 'catalog-missions', label: 'Missions', path: '/admin/catalog/missions', icon: Rocket, group: 'Catalog' },
+  { key: 'catalog-ground-stations', label: 'Ground Stations', path: '/admin/catalog/ground-stations', icon: Radio, group: 'Catalog' },
+  { key: 'catalog-launch-vehicles', label: 'Launch Vehicles', path: '/admin/catalog/launch-vehicles', icon: Car, group: 'Catalog' },
+  { key: 'users', label: 'Users & API Keys', path: '/admin/users', icon: Users, group: 'Access' },
+  { key: 'events-conjunctions', label: 'Conjunctions', path: '/admin/events/conjunctions', icon: AlertTriangle, group: 'Events' },
+  { key: 'tle', label: 'Manual TLE Ingest', path: '/admin/tle', icon: Upload, group: 'Operations' },
+  { key: 'atsad-datasets', label: 'Datasets', path: '/admin/atsad?tab=datasets', icon: Database, group: 'ATSAD Bench' },
+  { key: 'atsad-models', label: 'Models', path: '/admin/atsad?tab=models', icon: Cpu, group: 'ATSAD Bench' },
+  { key: 'atsad-runs', label: 'Runs', path: '/admin/atsad?tab=runs', icon: Play, group: 'ATSAD Bench' },
 ]
 
 async function apiFetch(path: string, init?: RequestInit) {
@@ -65,6 +66,8 @@ export default function Admin() {
   const [newApiKeyName, setNewApiKeyName] = useState('default-service-key')
   const [issuedKey, setIssuedKey] = useState<string | null>(null)
   const [tlePayload, setTlePayload] = useState({ name: '', line1: '', line2: '' })
+  const [searchQuery, setSearchQuery] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [runResults, setRunResults] = useState<Record<string, unknown>[]>([])
   const [runDetections, setRunDetections] = useState<Record<string, unknown>[]>([])
 
@@ -256,88 +259,279 @@ export default function Admin() {
   return (
     <div className="h-screen w-full bg-[#04060b] text-slate-200 pt-[4.5rem] overflow-hidden">
       <Header />
-      <div className="h-full p-6 flex gap-4">
-        <div className="w-80 border border-white/10 rounded-xl p-3 bg-[#0a1224] overflow-auto">
-          <p className="text-xs uppercase text-slate-500 mb-2 tracking-wider">Admin modules</p>
-          {SECTION_ORDER.map((entry) => (
-            <Link
-              to={entry.path}
-              key={entry.key}
-              className={`block w-full text-left px-3 py-2 rounded-lg mb-1 ${section === entry.key ? 'bg-blue-600/20 text-blue-300' : 'hover:bg-white/5'}`}
-            >
-              {entry.label}
-            </Link>
-          ))}
+      <div className="h-full p-4 flex gap-4 overflow-hidden">
+        {/* Sidebar */}
+        <div className="w-64 shrink-0 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#0a1224] to-[#080e1a] overflow-auto custom-scrollbar">
+          <div className="p-4 border-b border-white/[0.06]">
+            <h2 className="text-sm font-bold text-white tracking-wide">Admin Console</h2>
+            <p className="text-[10px] text-slate-500 mt-0.5">Manage platform resources</p>
+          </div>
+          <div className="p-2">
+            {Array.from(new Set(SECTION_ORDER.map(s => s.group))).map(group => (
+              <div key={group} className="mb-3">
+                <p className="text-[10px] uppercase text-slate-600 tracking-widest font-bold px-3 py-1.5">{group}</p>
+                {SECTION_ORDER.filter(s => s.group === group).map((entry) => {
+                  const Icon = entry.icon
+                  const isActive = section === entry.key
+                  return (
+                    <Link
+                      to={entry.path}
+                      key={entry.key}
+                      className={`flex items-center gap-2.5 w-full text-left px-3 py-2 rounded-xl mb-0.5 text-sm transition-all duration-150 ${
+                        isActive
+                          ? 'bg-blue-500/15 text-blue-300 border border-blue-500/20 shadow-[0_0_12px_rgba(59,130,246,0.1)]'
+                          : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
+                      }`}
+                    >
+                      <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-400' : 'text-slate-500'}`} />
+                      <span className="truncate">{entry.label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex-1 grid grid-cols-2 gap-4">
           {section === 'tle' ? (
-            <div className="col-span-2 border border-white/10 rounded-xl p-4 bg-[#0a1224]">
-              <h2 className="font-semibold mb-3">Manual TLE ingest</h2>
-              <p className="text-xs text-slate-400 mb-4">For objects not present in CelesTrak, ingest a full TLE entry manually.</p>
-              <div className="space-y-2 max-w-3xl">
-                <input className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-sm" placeholder="Object Name" value={tlePayload.name} onChange={(e) => setTlePayload((v) => ({ ...v, name: e.target.value }))} />
-                <input className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-xs font-mono" placeholder="TLE Line 1 (69 chars)" value={tlePayload.line1} onChange={(e) => setTlePayload((v) => ({ ...v, line1: e.target.value }))} />
-                <input className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-xs font-mono" placeholder="TLE Line 2 (69 chars)" value={tlePayload.line2} onChange={(e) => setTlePayload((v) => ({ ...v, line2: e.target.value }))} />
-                <button className="px-3 py-2 rounded bg-emerald-600/20 text-emerald-300" onClick={() => void submitManualTle()}>
-                  Ingest Manual TLE
-                </button>
-                {message && <p className="text-xs text-amber-300">{message}</p>}
+            <div className="col-span-2 border border-white/10 rounded-2xl p-6 bg-gradient-to-br from-[#0a1224] to-[#080e1a]">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-white">Manual TLE Ingest</h2>
+                  <p className="text-xs text-slate-500">Add objects bypassing automatic catalog synchronization.</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">Object Designation</label>
+                    <input 
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:ring-1 focus:ring-blue-500/40 outline-none transition-all" 
+                      placeholder="e.g. STARLINK-5042" 
+                      value={tlePayload.name} 
+                      onChange={(e) => setTlePayload((v) => ({ ...v, name: e.target.value }))} 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">TLE Line 1</label>
+                    <input 
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-mono text-cyan-300 focus:ring-1 focus:ring-blue-500/40 outline-none transition-all" 
+                      placeholder="1 25544U 98067A   23234.50421875  .00016717  00000-0  30143-3 0  9999" 
+                      value={tlePayload.line1} 
+                      onChange={(e) => setTlePayload((v) => ({ ...v, line1: e.target.value }))} 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">TLE Line 2</label>
+                    <input 
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-mono text-cyan-300 focus:ring-1 focus:ring-blue-500/40 outline-none transition-all" 
+                      placeholder="2 25544  51.6421  21.1448 0004481  42.1481  22.1481 15.49814812384124" 
+                      value={tlePayload.line2} 
+                      onChange={(e) => setTlePayload((v) => ({ ...v, line2: e.target.value }))} 
+                    />
+                  </div>
+                  
+                  <button 
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-500 text-white font-semibold text-sm hover:bg-blue-400 transition-all shadow-lg shadow-blue-500/20 active:scale-95" 
+                    onClick={() => void submitManualTle()}
+                  >
+                    <Upload className="w-4 h-4" />
+                    Ingest into Catalog
+                  </button>
+                  
+                  {message && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5" />
+                      {message}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="rounded-2xl bg-black/30 border border-white/5 p-5 flex flex-col justify-center">
+                  <div className="flex items-center gap-2 text-amber-400 mb-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-xs font-bold uppercase tracking-wider">Operational Note</span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Manually ingested TLEs are prioritized over CelesTrak data for the same NORAD ID. 
+                    Ensure the Two-Line Element set is in standard Format 1/2 to avoid propagation failures 
+                    in the SGP4 engine.
+                  </p>
+                </div>
               </div>
             </div>
           ) : (
             <>
-              <div className="border border-white/10 rounded-xl p-4 bg-[#0a1224] overflow-auto">
-                <div className="flex justify-between items-center mb-3">
-                  <h2 className="font-semibold">Records</h2>
-                  <button className="text-xs px-2 py-1 bg-white/10 rounded" onClick={() => void loadItems()}>Refresh</button>
-                </div>
-                {loading && <p className="text-slate-400 text-sm">Loading...</p>}
-                <div className="space-y-2">
-                  {items.map((item, idx) => (
-                    <button
-                      key={idx}
-                      className={`w-full text-left p-2 rounded border ${selected === item ? 'border-blue-400/50 bg-blue-500/10' : 'border-white/10 hover:bg-white/5'}`}
-                      onClick={() => {
-                        setSelected(item)
-                        if (section === 'users' && item.user_id) void loadApiKeys(item.user_id as number)
-                      }}
-                    >
-                      <p className="text-sm font-medium">{String(item.name ?? item.username ?? item.email ?? `Record ${idx + 1}`)}</p>
-                      <p className="text-xs text-slate-400">{tabConfig?.id}: {String(item[tabConfig?.id ?? 'id'] ?? 'n/a')}</p>
+              <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#0a1224] to-[#080e1a] overflow-hidden flex flex-col">
+                <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold text-white text-sm">Records</h2>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{items.length} entries loaded</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => { setSelected(null); setFormText('{}'); setConfirmDelete(false) }} className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors" title="New record">
+                      <Plus className="w-3.5 h-3.5" />
                     </button>
-                  ))}
+                    <button onClick={() => void loadItems()} className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors" title="Refresh">
+                      <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+                <div className="p-3 border-b border-white/[0.04]">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search records..."
+                      className="w-full bg-black/30 border border-white/[0.08] rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/40 transition-all"
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 overflow-auto p-2 space-y-1 custom-scrollbar">
+                  {loading && <div className="flex items-center justify-center py-8"><RefreshCw className="w-5 h-5 text-blue-400 animate-spin" /></div>}
+                  {!loading && items.filter(item => {
+                    if (!searchQuery) return true
+                    const label = String(item.name ?? item.username ?? item.email ?? '')
+                    return label.toLowerCase().includes(searchQuery.toLowerCase())
+                  }).map((item, idx) => {
+                    const label = String(item.name ?? item.username ?? item.email ?? `Record ${idx + 1}`)
+                    const idVal = String(item[tabConfig?.id ?? 'id'] ?? 'n/a')
+                    const isSelected = selected === item
+                    return (
+                      <button
+                        key={idx}
+                        className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all duration-150 group ${
+                          isSelected
+                            ? 'border-blue-500/30 bg-blue-500/10 shadow-[0_0_12px_rgba(59,130,246,0.08)]'
+                            : 'border-transparent hover:bg-white/[0.03] hover:border-white/[0.06]'
+                        }`}
+                        onClick={() => {
+                          setSelected(item)
+                          setConfirmDelete(false)
+                          if (section === 'users' && item.user_id) void loadApiKeys(item.user_id as number)
+                        }}
+                      >
+                        <p className={`text-sm font-medium truncate ${isSelected ? 'text-blue-300' : 'text-slate-200'}`}>{label}</p>
+                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">ID: {idVal}</p>
+                      </button>
+                    )
+                  })}
+                  {!loading && items.length === 0 && <p className="text-center text-slate-600 text-xs py-8">No records found</p>}
                 </div>
               </div>
 
-              <div className="border border-white/10 rounded-xl p-4 bg-[#0a1224] overflow-auto">
-                <h2 className="font-semibold mb-2">JSON editor</h2>
-                <p className="text-xs text-slate-400 mb-2">Edit JSON then Create / Update / Delete.</p>
-                <textarea
-                  value={formText}
-                  onChange={(e) => setFormText(e.target.value)}
-                  className="w-full min-h-[320px] bg-black/40 border border-white/10 rounded-lg p-2 font-mono text-xs"
-                />
-                <div className="flex gap-2 mt-3">
-                  <button className="px-3 py-2 rounded bg-emerald-600/20 text-emerald-300 disabled:opacity-40" disabled={!canEdit} onClick={() => void handleCreate()}>Create</button>
-                  <button className="px-3 py-2 rounded bg-blue-600/20 text-blue-300 disabled:opacity-40" disabled={!selected || !canEdit} onClick={() => void handleUpdate()}>Update</button>
-                  <button className="px-3 py-2 rounded bg-red-600/20 text-red-300 disabled:opacity-40" disabled={!selected || !canEdit} onClick={() => void handleDelete()}>Delete</button>
+              <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#0a1224] to-[#080e1a] overflow-auto flex flex-col">
+                <div className="p-4 border-b border-white/[0.06]">
+                  <h2 className="font-semibold text-white text-sm flex items-center gap-2">
+                    <Pencil className="w-3.5 h-3.5 text-blue-400" />
+                    {selected ? 'Edit Record' : 'New Record'}
+                  </h2>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Edit JSON payload then Create, Update, or Delete.</p>
                 </div>
-                {message && <p className="text-xs mt-2 text-amber-300">{message}</p>}
+                <div className="flex-1 p-4">
+                  {section === 'users' && canManageUsers && (
+                    <div className="mb-3 p-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5">
+                      <p className="text-[10px] uppercase tracking-widest text-cyan-300 font-bold mb-2">User role templates</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { label: 'Viewer', role: 'viewer' },
+                          { label: 'Operator', role: 'operator' },
+                          { label: 'Admin', role: 'admin' },
+                        ].map((preset) => (
+                          <button
+                            key={preset.role}
+                            className="px-2.5 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-[10px] font-medium hover:bg-cyan-500/20 transition-all"
+                            onClick={() => {
+                              const base = {
+                                username: `${preset.role}_new_user`,
+                                email: `${preset.role}.new@orbita.local`,
+                                full_name: `${preset.label} User`,
+                                role: preset.role,
+                                org_id: user?.org_id ?? null,
+                                password: 'ChangeMe123!',
+                              }
+                              setSelected(null)
+                              setFormText(JSON.stringify(base, null, 2))
+                            }}
+                          >
+                            New {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <textarea
+                    value={formText}
+                    onChange={(e) => setFormText(e.target.value)}
+                    className="w-full min-h-[280px] bg-black/40 border border-white/[0.08] rounded-xl p-4 font-mono text-xs text-emerald-300 leading-relaxed focus:outline-none focus:ring-1 focus:ring-blue-500/40 transition-all resize-none custom-scrollbar"
+                    spellCheck={false}
+                  />
+                </div>
+                <div className="p-4 border-t border-white/[0.06] space-y-3">
+                  <div className="flex gap-2">
+                    <button
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/20 transition-all text-xs font-medium disabled:opacity-30 disabled:cursor-not-allowed"
+                      disabled={!canEdit}
+                      onClick={() => void handleCreate()}
+                    >
+                      <Plus className="w-3 h-3" /> Create
+                    </button>
+                    <button
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 border border-blue-500/20 transition-all text-xs font-medium disabled:opacity-30 disabled:cursor-not-allowed"
+                      disabled={!selected || !canEdit}
+                      onClick={() => void handleUpdate()}
+                    >
+                      <Check className="w-3 h-3" /> Update
+                    </button>
+                    {!confirmDelete ? (
+                      <button
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all text-xs font-medium disabled:opacity-30 disabled:cursor-not-allowed ml-auto"
+                        disabled={!selected || !canEdit}
+                        onClick={() => setConfirmDelete(true)}
+                      >
+                        <Trash2 className="w-3 h-3" /> Delete
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <span className="text-[10px] text-red-400">Confirm?</span>
+                        <button className="px-3 py-2 rounded-xl bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-medium hover:bg-red-500/30 transition-all" onClick={() => { void handleDelete(); setConfirmDelete(false) }}>Yes, delete</button>
+                        <button className="px-3 py-2 rounded-xl bg-white/5 text-slate-400 text-xs hover:bg-white/10 transition-all" onClick={() => setConfirmDelete(false)}><X className="w-3 h-3" /></button>
+                      </div>
+                    )}
+                  </div>
+                  {message && (
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border ${
+                      message.includes('success') || message.includes('Created') || message.includes('Updated') || message.includes('Deleted') || message.includes('ingested') || message.includes('Loaded')
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                        : 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+                    }`}>
+                      {message.includes('success') || message.includes('Created') || message.includes('Updated') ? <Check className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                      {message}
+                      <button className="ml-auto" onClick={() => setMessage(null)}><X className="w-3 h-3" /></button>
+                    </div>
+                  )}
+                </div>
 
                 {section === 'users' && selected && canManageUsers && (
-                  <div className="mt-6 border-t border-white/10 pt-4">
-                    <h3 className="font-medium text-sm mb-2">API keys</h3>
-                    <div className="flex gap-2 mb-2">
-                      <input value={newApiKeyName} onChange={(e) => setNewApiKeyName(e.target.value)} className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-sm" />
-                      <button className="px-3 py-1 rounded bg-indigo-600/20 text-indigo-300" onClick={() => void createApiKey()}>Issue</button>
+                  <div className="mt-4 border-t border-white/[0.06] pt-4">
+                    <h3 className="font-medium text-sm mb-3 flex items-center gap-2 text-white"><Key className="w-3.5 h-3.5 text-indigo-400" /> API Keys</h3>
+                    <div className="flex gap-2 mb-3">
+                      <input value={newApiKeyName} onChange={(e) => setNewApiKeyName(e.target.value)} className="flex-1 bg-black/30 border border-white/[0.08] rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500/40" />
+                      <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-500/15 text-indigo-300 border border-indigo-500/20 text-xs font-medium hover:bg-indigo-500/25 transition-all" onClick={() => void createApiKey()}><Plus className="w-3 h-3" /> Issue</button>
                     </div>
-                    {issuedKey && <p className="text-xs text-green-300 break-all mb-2">New key (copy now): {issuedKey}</p>}
+                    {issuedKey && <p className="text-xs text-emerald-300 break-all mb-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2">🔑 New key (copy now): {issuedKey}</p>}
                     <div className="space-y-1">
                       {apiKeys.map((key) => (
-                        <div key={String(key.api_key_id)} className="text-xs border border-white/10 rounded p-2 flex justify-between items-center">
-                          <span>{String(key.key_name)} · {Boolean(key.is_active) ? 'active' : 'inactive'}</span>
-                          {Boolean(key.is_active) && <button className="text-red-300" onClick={() => void revokeApiKey(Number(key.api_key_id))}>Revoke</button>}
+                        <div key={String(key.api_key_id)} className="text-xs border border-white/[0.06] rounded-xl p-2.5 flex justify-between items-center bg-black/20">
+                          <span className="text-slate-300">{String(key.key_name)} · <span className={Boolean(key.is_active) ? 'text-emerald-400' : 'text-red-400'}>{Boolean(key.is_active) ? 'active' : 'revoked'}</span></span>
+                          {Boolean(key.is_active) && <button className="text-red-400 hover:text-red-300 transition-colors text-[10px] font-medium" onClick={() => void revokeApiKey(Number(key.api_key_id))}>Revoke</button>}
                         </div>
                       ))}
                     </div>
@@ -345,11 +539,11 @@ export default function Admin() {
                 )}
 
                 {section === 'events-conjunctions' && selected && (
-                  <div className="mt-6 border-t border-white/10 pt-4">
-                    <h3 className="font-medium text-sm mb-2">Conjunction lifecycle</h3>
-                    <div className="flex flex-wrap gap-2">
+                  <div className="mt-4 border-t border-white/[0.06] pt-4">
+                    <h3 className="font-medium text-sm mb-3 flex items-center gap-2 text-white"><ArrowRight className="w-3.5 h-3.5 text-purple-400" /> Conjunction Lifecycle</h3>
+                    <div className="flex flex-wrap gap-1.5">
                       {['NEW', 'ACKNOWLEDGED', 'INVESTIGATING', 'RESOLVED', 'FALSE_POSITIVE'].map((nextStatus) => (
-                        <button key={nextStatus} className="px-2 py-1 rounded bg-purple-600/20 text-purple-300 text-xs" onClick={() => void transitionConjunction(nextStatus)}>
+                        <button key={nextStatus} className="px-3 py-1.5 rounded-xl bg-purple-500/10 text-purple-300 border border-purple-500/15 text-[10px] font-bold tracking-wide hover:bg-purple-500/20 transition-all" onClick={() => void transitionConjunction(nextStatus)}>
                           {nextStatus}
                         </button>
                       ))}
@@ -358,12 +552,51 @@ export default function Admin() {
                 )}
 
                 {section === 'atsad-runs' && selected && (
-                  <div className="mt-6 border-t border-white/10 pt-4">
-                    <h3 className="font-medium text-sm mb-2">Run inspection</h3>
-                    <button className="px-3 py-1 rounded bg-cyan-600/20 text-cyan-300 text-xs mb-2" onClick={() => void inspectRun()}>
+                  <div className="mt-4 border-t border-white/[0.06] pt-4">
+                    <h3 className="font-medium text-sm mb-3 flex items-center gap-2 text-white">
+                      <Search className="w-3.5 h-3.5 text-cyan-400" /> Run Inspection
+                    </h3>
+                    <button 
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-xs font-medium hover:bg-cyan-500/20 transition-all mb-4" 
+                      onClick={() => void inspectRun()}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                       Load results + detections
                     </button>
-                    <p className="text-xs text-slate-400">Results: {runResults.length} · Detections: {runDetections.length}</p>
+                    
+                    {(runResults.length > 0 || runDetections.length > 0) && (
+                      <div className="space-y-4">
+                        <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                          <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Metrics Summary</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {runResults.map((res, i) => (
+                              <div key={i} className="flex justify-between items-center px-2 py-1 bg-white/5 rounded-lg">
+                                <span className="text-[10px] text-slate-400 uppercase">{String(res.metric_name)}</span>
+                                <span className="text-xs font-mono text-cyan-300">{Number(res.metric_value).toFixed(4)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {runDetections.length > 0 && (
+                          <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Sample Detections ({runDetections.length})</p>
+                            <div className="space-y-1.5 max-h-[150px] overflow-auto custom-scrollbar pr-1">
+                              {runDetections.slice(0, 10).map((det, i) => (
+                                <div key={i} className="text-[10px] p-2 bg-white/5 rounded-lg flex justify-between">
+                                  <span className="text-slate-300">Timestamp: {new Date(String(det.timestamp)).toLocaleTimeString()}</span>
+                                  <span className={`font-bold ${Number(det.is_anomaly) ? 'text-red-400' : 'text-slate-500'}`}>
+                                    {Number(det.is_anomaly) ? 'ANOMALY' : 'NOMINAL'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {runResults.length === 0 && !loading && <p className="text-[10px] text-slate-500 text-center italic">No results loaded yet</p>}
                   </div>
                 )}
               </div>
