@@ -7,6 +7,7 @@ export default function Header() {
   const { user, logout } = useAuth()
   const role = user?.role ?? 'viewer'
   const canAccessOps = role === 'operator' || role === 'admin' || role === 'superadmin'
+  const canAccessRegistry = role === 'admin' || role === 'superadmin'
   const canAccessAdmin = role === 'admin' || role === 'superadmin'
   const isSuperAdmin = role === 'superadmin'
   const location = useLocation()
@@ -83,14 +84,14 @@ export default function Header() {
               <NavLink to="/" className={navLinkClass}>
                 <Radar className="w-4 h-4" /> Dashboard
               </NavLink>
-              {canAccessOps && (
+              {canAccessRegistry && (
                 <NavLink to="/explorer" className={navLinkClass}>
                   <Database className="w-4 h-4" /> Registry
                 </NavLink>
               )}
               {canAccessOps && (
                 <NavLink to="/benchmark" className={navLinkClass}>
-                  <Trophy className="w-4 h-4" /> Benchmark
+                  <Trophy className="w-4 h-4" /> ATSAD Bench
                 </NavLink>
               )}
               <NavLink to="/kessler" className={navLinkClass}>
