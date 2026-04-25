@@ -13,6 +13,7 @@ type SectionKey =
   | 'catalog-launch-vehicles'
   | 'users'
   | 'events-conjunctions'
+  | 'events-maneuvers'
   | 'tle'
   | 'atsad-datasets'
   | 'atsad-models'
@@ -26,6 +27,7 @@ const SECTION_ORDER: { key: SectionKey; label: string; path: string; icon: React
   { key: 'catalog-launch-vehicles', label: 'Launch Vehicles', path: '/admin/catalog/launch-vehicles', icon: Car, group: 'Catalog' },
   { key: 'users', label: 'Users & API Keys', path: '/admin/users', icon: Users, group: 'Access' },
   { key: 'events-conjunctions', label: 'Conjunctions', path: '/admin/events/conjunctions', icon: AlertTriangle, group: 'Events' },
+  { key: 'events-maneuvers', label: 'Maneuvers', path: '/admin/events/maneuvers', icon: Rocket, group: 'Events' },
   { key: 'tle', label: 'Manual TLE Ingest', path: '/admin/tle', icon: Upload, group: 'Operations' },
   { key: 'atsad-datasets', label: 'Datasets', path: '/admin/atsad?tab=datasets', icon: Database, group: 'ATSAD Bench' },
   { key: 'atsad-models', label: 'Models', path: '/admin/atsad?tab=models', icon: Cpu, group: 'ATSAD Bench' },
@@ -81,6 +83,7 @@ export default function Admin() {
     if (path === '/admin/catalog/launch-vehicles') return 'catalog-launch-vehicles'
     if (path === '/admin/users') return 'users'
     if (path === '/admin/events/conjunctions') return 'events-conjunctions'
+    if (path === '/admin/events/maneuvers') return 'events-maneuvers'
     if (path === '/admin/tle') return 'tle'
     if (path === '/admin/atsad') {
       const tab = params.get('tab')
@@ -107,6 +110,8 @@ export default function Admin() {
         return { list: '/auth/users?limit=200', create: '/auth/users', id: 'user_id' }
       case 'events-conjunctions':
         return { list: '/conjunctions/?limit=200', create: '/conjunctions/', id: 'conjunction_id' }
+      case 'events-maneuvers':
+        return { list: '/maneuvers/?limit=200', create: '/maneuvers/', id: 'maneuver_id' }
       case 'atsad-datasets':
         return { list: '/atsad/datasets?limit=200', create: '/atsad/datasets', id: 'dataset_id' }
       case 'atsad-models':
