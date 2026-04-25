@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import Header from '../components/Header'
-import { fetchLeaderboard } from '../api/orbita'
+import { fetchLeaderboard, evaluateAtsadRun, fetchAtsadRunsList, fetchAtsadStats, seedAndEvaluateAtsadDemo, type AtsadRunListItem } from '../api/orbita'
 import type { LeaderboardEntry } from '../types'
 import { Trophy, Medal, Target, Zap, Clock, Hash, BarChart3, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 
@@ -54,20 +54,61 @@ export default function Benchmark() {
   const [sortKey, setSortKey] = useState('atsad_composite_score')
   const [sortAsc, setSortAsc] = useState(false)
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
+  const [runId, setRunId] = useState('')
+  const [yTrueInput, setYTrueInput] = useState('0,0,0,1,1,0,0,1,0,0')
+  const [yPredInput, setYPredInput] = useState('0,0,0,1,0,0,0,1,0,0')
+  const [submitLoading, setSubmitLoading] = useState(false)
+  const [submitMsg, setSubmitMsg] = useState<string | null>(null)
+  const [atsadRuns, setAtsadRuns] = useState<AtsadRunListItem[]>([])
+  const [modelTotal, setModelTotal] = useState(0)
+  const [runTotal, setRunTotal] = useState(0)
+  const [demoLoading, setDemoLoading] = useState(false)
 
   const loadData = async () => {
     setLoading(true)
-    const data = await fetchLeaderboard()
+    const [data, stats, runs] = await Promise.all([
+      fetchLeaderboard(),
+      fetchAtsadStats(),
+      fetchAtsadRunsList(100),
+    ])
     setEntries(data)
+    setModelTotal(stats.modelTotal)
+    setRunTotal(stats.runTotal)
+    setAtsadRuns(runs)
+    if (!runId.trim() && runs.length > 0) {
+      setRunId(String(runs[0].run_id))
+    }
     setLoading(false)
   }
 
   useEffect(() => {
-    const init = async () => {
-      await loadData()
-    }
-    init()
+    void loadData()
   }, [])
+
+  const handleDemoSeed = async () => {
+    const yTrue = parse01Series(yTrueInput)
+    const yPred = parse01Series(yPredInput)
+    if (yTrue.length === 0 || yPred.length === 0) {
+      setSubmitMsg('Set y_true and y_pred (0/1) before running the demo.')
+      return
+    }
+    if (yTrue.length !== yPred.length) {
+      setSubmitMsg('y_true and y_pred must be the same length.')
+      return
+    }
+    setDemoLoading(true)
+    setSubmitMsg(null)
+    const out = await seedAndEvaluateAtsadDemo(yTrue, yPred)
+    if (out.ok) {
+      if (out.runId) setRunId(String(out.runId))
+      setSubmitMsg(`Demo complete — run #${out.runId}. Leaderboard updated.`)
+      await loadData()
+    } else {
+      setSubmitMsg(out.error ? `Demo failed: ${out.error}` : 'Demo failed.')
+      if (out.runId) setRunId(String(out.runId))
+    }
+    setDemoLoading(false)
+  }
 
   const fmt = (v: number | undefined | null, decimals = 3) =>
     v != null ? v.toFixed(decimals) : '—'
@@ -91,6 +132,50 @@ export default function Benchmark() {
     HYBRID: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
   }
 
+  const parse01Series = (text: string): number[] => {
+    return text
+      .split(/[,\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => Number(s))
+      .filter((n) => n === 0 || n === 1)
+  }
+
+  const submitEvaluation = async () => {
+    const parsedRunId = Number(runId)
+    const yTrue = parse01Series(yTrueInput)
+    const yPred = parse01Series(yPredInput)
+
+    if (!parsedRunId || Number.isNaN(parsedRunId)) {
+      setSubmitMsg('Enter a valid run ID.')
+      return
+    }
+    if (yTrue.length === 0 || yPred.length === 0) {
+      setSubmitMsg('y_true and y_pred must contain 0/1 values.')
+      return
+    }
+    if (yTrue.length !== yPred.length) {
+      setSubmitMsg('y_true and y_pred must be the same length.')
+      return
+    }
+
+    setSubmitLoading(true)
+    setSubmitMsg(null)
+    const result = await evaluateAtsadRun({
+      run_id: parsedRunId,
+      y_true: yTrue,
+      y_pred: yPred,
+      save_detections: true,
+    })
+    if (result.ok) {
+      setSubmitMsg('Evaluation submitted and leaderboard refreshed.')
+      await loadData()
+    } else {
+      setSubmitMsg(result.error ?? 'Evaluation failed.')
+    }
+    setSubmitLoading(false)
+  }
+
   return (
     <div className="h-screen w-full flex flex-col bg-[#04060b] text-slate-200 overflow-hidden font-['Inter'] pt-[4.5rem]">
       <Header />
@@ -106,8 +191,8 @@ export default function Benchmark() {
                 <Trophy className="w-7 h-7 text-yellow-400" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-white tracking-tight">ATSADBench Leaderboard</h1>
-                <p className="text-slate-400 mt-0.5">Aerospace Time Series Anomaly Detection Benchmark — Model Rankings</p>
+                <h1 className="text-3xl font-bold text-white tracking-tight">ATSAD Bench</h1>
+                <p className="text-slate-400 mt-0.5">ATSADBench — anomaly detection model leaderboard and evaluation runs</p>
               </div>
               <button
                 onClick={loadData}
@@ -120,8 +205,8 @@ export default function Benchmark() {
 
             {/* Summary cards */}
             <div className="flex gap-3 mt-6">
-              <SummaryCard label="Registered Models" value={`${[...new Set(entries.map(e => e.model_name))].length}`} icon={Hash} color="border-blue-500/20 text-blue-400" />
-              <SummaryCard label="Benchmark Runs" value={`${entries.length}`} icon={BarChart3} color="border-purple-500/20 text-purple-400" />
+              <SummaryCard label="Registered Models" value={`${modelTotal || [...new Set(entries.map(e => e.model_name))].length}`} icon={Hash} color="border-blue-500/20 text-blue-400" />
+              <SummaryCard label="Eval runs" value={`${runTotal || entries.length}`} icon={BarChart3} color="border-purple-500/20 text-purple-400" />
               <SummaryCard label="Best ATSAD Score" value={bestScore > 0 ? bestScore.toFixed(4) : '—'} icon={Target} color="border-yellow-500/20 text-yellow-400" />
               <SummaryCard label="Model Types" value={`${modelTypes.length}`} icon={Zap} color="border-cyan-500/20 text-cyan-400" />
             </div>
@@ -129,6 +214,74 @@ export default function Benchmark() {
         </div>
 
         <div className="px-10 py-6 space-y-5">
+          <div className="rounded-2xl border border-white/[0.08] bg-slate-900/35 p-4 md:p-5">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h3 className="text-sm font-semibold text-white">Quick Evaluate</h3>
+              <span className="text-[11px] text-slate-500">POST `/api/v1/atsad/evaluate`</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider">Run</label>
+                <div className="flex gap-2">
+                  <select
+                    value={atsadRuns.some((r) => String(r.run_id) === runId) ? runId : ''}
+                    onChange={(e) => {
+                      if (e.target.value) setRunId(e.target.value)
+                    }}
+                    className="bg-slate-950/60 border border-white/10 rounded-xl px-2 py-2 text-xs text-slate-200 max-w-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  >
+                    <option value="">Pick run…</option>
+                    {atsadRuns.map((r) => (
+                      <option key={r.run_id} value={String(r.run_id)}>
+                        #{r.run_id} {r.status}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    value={runId}
+                    onChange={(e) => setRunId(e.target.value)}
+                    placeholder="Run ID"
+                    className="flex-1 min-w-0 bg-slate-950/60 border border-white/10 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                </div>
+              </div>
+              <input
+                value={yTrueInput}
+                onChange={(e) => setYTrueInput(e.target.value)}
+                placeholder="y_true (comma-separated 0/1)"
+                className="bg-slate-950/60 border border-white/10 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              />
+              <input
+                value={yPredInput}
+                onChange={(e) => setYPredInput(e.target.value)}
+                placeholder="y_pred (comma-separated 0/1)"
+                className="bg-slate-950/60 border border-white/10 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                onClick={submitEvaluation}
+                disabled={submitLoading || demoLoading}
+                className="px-4 py-2 rounded-xl text-sm bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white border border-blue-500/40"
+              >
+                {submitLoading ? 'Submitting...' : 'Run Evaluation'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDemoSeed}
+                disabled={demoLoading || submitLoading}
+                className="px-4 py-2 rounded-xl text-sm bg-emerald-600/80 hover:bg-emerald-500 disabled:opacity-50 text-white border border-emerald-500/40"
+              >
+                {demoLoading ? 'Setting up...' : 'Create demo run & evaluate'}
+              </button>
+              {submitMsg && <span className="text-xs text-slate-300 max-w-xl">{submitMsg}</span>}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-2">
+              <strong className="text-slate-400">Run Evaluation</strong> needs an existing run ID. Use the dropdown, or click{' '}
+              <strong className="text-slate-400">Create demo run &amp; evaluate</strong> to register a dataset, model, and run, then compute metrics in one step.
+            </p>
+          </div>
+
           {/* Sort controls */}
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Sort by:</span>
@@ -164,9 +317,10 @@ export default function Benchmark() {
           ) : sorted.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-slate-500 border border-dashed border-white/8 rounded-3xl bg-white/[0.015]">
               <Trophy className="w-12 h-12 text-slate-700 mb-4" />
-              <h3 className="text-lg font-medium text-slate-400 mb-2">No Benchmark Results Yet</h3>
+              <h3 className="text-lg font-medium text-slate-400 mb-2">No leaderboard results yet</h3>
               <p className="text-slate-500 text-sm text-center max-w-md">
-                Submit evaluation runs via the ATSADBench API at <code className="text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">/api/v1/atsad/evaluate</code>
+                Create a run with <span className="text-emerald-400">Create demo run &amp; evaluate</span>, or pick a run ID and use{' '}
+                <code className="text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">POST /api/v1/atsad/evaluate</code>
               </p>
             </div>
           ) : (
