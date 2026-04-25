@@ -3,13 +3,19 @@ import Header from '../components/Header'
 import GlobeView from '../components/GlobeView'
 import { useTimeController } from '../hooks/useTimeController'
 import { useWebSocket } from '../hooks/useWebSocket'
-import { fetchUnacknowledgedAlerts, fetchPlatformStats, fetchConjunctionAlerts, fetchRealPositions, acknowledgeAlert } from '../api/orbita'
+import { fetchUnacknowledgedAlerts, fetchPlatformStats, fetchConjunctionAlerts, fetchRealPositions, acknowledgeAlert, fetchTelemetryForObject, type TelemetryPoint, downloadMissionReport, scheduleManeuver, flagAlertForReview } from '../api/orbita'
 import type { AnomalyAlert, PlatformStats, ConjunctionAlert } from '../types'
+import { useAuth } from '../contexts/useAuth'
+import { useNavigate } from 'react-router-dom'
 import { WifiOff, RefreshCw } from 'lucide-react'
 
 
 
 export default function Dashboard() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [globeMode, setGlobeMode] = useState<'3d' | '2d'>('3d')
+  const [showOrbits, setShowOrbits] = useState(false)
   const [anomalies, setAnomalies] = useState<AnomalyAlert[]>([])
   const [stats, setStats] = useState<PlatformStats | null>(null)
   const [conjunctions, setConjunctions] = useState<ConjunctionAlert[]>([])
@@ -19,6 +25,11 @@ export default function Dashboard() {
   const [tleError, setTleError] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [ackingId, setAckingId] = useState<number | null>(null)
+  const [telemetryRows, setTelemetryRows] = useState<TelemetryPoint[]>([])
+  const [telemetryLoading, setTelemetryLoading] = useState(false)
+  const [telemetryLoadedFor, setTelemetryLoadedFor] = useState<number | null>(null)
+  const [quickActionBusy, setQuickActionBusy] = useState<'report' | 'maneuver' | 'review' | null>(null)
+  const [quickActionMsg, setQuickActionMsg] = useState<string | null>(null)
 
   // Phase 4: Time controller for timeline scrubbing
   const timeController = useTimeController()
@@ -107,8 +118,62 @@ export default function Dashboard() {
   const orbitEntries = Object.entries(stats?.objects_by_orbit_class ?? {})
   const orbitTotal = orbitEntries.reduce((acc, [, count]) => acc + count, 0)
   const conjunctionRisk = conjunctions.length
+  const isViewer = (user?.role ?? 'viewer') === 'viewer'
+  const isOperator = user?.role === 'operator'
+  const canUseMapControls = isViewer || (user?.role === 'operator')
 
   const utcClock = new Date().toUTCString().split(' ').slice(4, 5)[0] + ' UTC'
+
+  const handleViewTelemetry = async () => {
+    if (!selected) return
+    setTelemetryLoading(true)
+    const rows = await fetchTelemetryForObject(selected.object_id, 8)
+    setTelemetryRows(rows)
+    setTelemetryLoadedFor(selected.object_id)
+    setTelemetryLoading(false)
+  }
+
+  const handleInvestigate = () => {
+    if (!selected) return
+    navigate(`/investigate?alertId=${selected.alert_id}`)
+  }
+
+  const handleExportReport = async () => {
+    if (!selected) return
+    setQuickActionBusy('report')
+    setQuickActionMsg(null)
+    const ok = await downloadMissionReport(selected.object_id)
+    setQuickActionMsg(ok ? 'CDM report downloaded.' : 'Failed to export CDM report.')
+    setQuickActionBusy(null)
+  }
+
+  const handleScheduleManeuver = async () => {
+    if (!selected) return
+    setQuickActionBusy('maneuver')
+    setQuickActionMsg(null)
+    const result = await scheduleManeuver(selected.object_id, {
+      alertId: selected.alert_id,
+      anomalyType: selected.anomaly_type,
+      severity: selected.severity,
+      subsystem: selected.subsystem,
+      requestedBy: user?.username,
+    })
+    setQuickActionMsg(
+      result.ok
+        ? `Maneuver #${result.item?.maneuver_id ?? '—'} scheduled (PLANNED) at ${new Date(result.item?.planned_time ?? Date.now()).toLocaleString()}.`
+        : 'Failed to schedule maneuver.'
+    )
+    setQuickActionBusy(null)
+  }
+
+  const handleFlagReview = async () => {
+    if (!selected) return
+    setQuickActionBusy('review')
+    setQuickActionMsg(null)
+    const ok = await flagAlertForReview(selected.alert_id)
+    setQuickActionMsg(ok ? 'Alert flagged for review.' : 'Failed to flag alert for review.')
+    setQuickActionBusy(null)
+  }
 
   return (
     <div className="h-screen w-full flex flex-col bg-[#060d1a] text-slate-200 overflow-hidden pt-[4.5rem]">
@@ -217,18 +282,41 @@ export default function Dashboard() {
           <GlobeView
             anomalies={anomalies}
             realPositions={realPositions}
-            selectedAnomaly={selectedAnomaly}
+            selectedAnomaly={selected}
             setSelectedAnomaly={setSelectedAnomaly}
             tleError={tleError}
             lastUpdated={lastUpdated}
             currentTime={timeController.currentTime}
             hideOverlays
+            enableDayNight={isViewer}
+            sceneMode={globeMode}
+            showOrbits={showOrbits}
+            autoRotateEarth={isViewer}
+            showRotationStats={isViewer}
           />
 
           <div className="absolute top-2.5 right-2.5 flex gap-1 bg-[#040810]/80 border border-white/[0.08] rounded-md p-0.5">
-            <button className="px-2 py-1 text-[10px] rounded bg-blue-500/20 text-blue-300">3D Globe</button>
-            <button className="px-2 py-1 text-[10px] rounded text-slate-500">2D Map</button>
-            <button className="px-2 py-1 text-[10px] rounded text-slate-500">Orbits</button>
+            <button
+              onClick={() => canUseMapControls && setGlobeMode('3d')}
+              disabled={!canUseMapControls}
+              className={`px-2 py-1 text-[10px] rounded ${globeMode === '3d' ? 'bg-blue-500/20 text-blue-300' : 'text-slate-400'} ${!canUseMapControls ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              3D Globe
+            </button>
+            <button
+              onClick={() => canUseMapControls && setGlobeMode('2d')}
+              disabled={!canUseMapControls}
+              className={`px-2 py-1 text-[10px] rounded ${globeMode === '2d' ? 'bg-blue-500/20 text-blue-300' : 'text-slate-400'} ${!canUseMapControls ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              2D Map
+            </button>
+            <button
+              onClick={() => canUseMapControls && setShowOrbits((v) => !v)}
+              disabled={!canUseMapControls}
+              className={`px-2 py-1 text-[10px] rounded ${showOrbits ? 'bg-blue-500/20 text-blue-300' : 'text-slate-400'} ${!canUseMapControls ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              Orbits
+            </button>
           </div>
 
           <div className="absolute top-3 left-3 bg-[#060d1a]/85 border border-white/[0.1] rounded-lg p-2.5 backdrop-blur">
@@ -257,8 +345,20 @@ export default function Dashboard() {
                 <div className="flex justify-between"><span className="text-slate-500">Alert</span><span className="text-slate-300">{selected?.anomaly_type ?? 'None'}</span></div>
               </div>
               <div className="mt-3 space-y-1.5">
-                <button className="w-full text-left px-2.5 py-1.5 text-[11px] rounded border border-blue-500/25 bg-blue-500/15 text-blue-300">View telemetry</button>
-                <button className="w-full text-left px-2.5 py-1.5 text-[11px] rounded border border-blue-500/25 bg-blue-500/15 text-blue-300">Investigate</button>
+                <button
+                  className="w-full text-left px-2.5 py-1.5 text-[11px] rounded border border-blue-500/25 bg-blue-500/15 text-blue-300 disabled:opacity-50"
+                  disabled={!selected || telemetryLoading}
+                  onClick={handleViewTelemetry}
+                >
+                  {telemetryLoading ? 'Loading telemetry...' : 'View telemetry'}
+                </button>
+                <button
+                  className="w-full text-left px-2.5 py-1.5 text-[11px] rounded border border-blue-500/25 bg-blue-500/15 text-blue-300 disabled:opacity-50"
+                  disabled={!selected}
+                  onClick={handleInvestigate}
+                >
+                  Investigate
+                </button>
                 <button
                   className="w-full text-left px-2.5 py-1.5 text-[11px] rounded border border-white/[0.08] text-slate-400 hover:bg-white/[0.05]"
                   disabled={!selected || ackingId === selected.alert_id}
@@ -267,6 +367,20 @@ export default function Dashboard() {
                   {selected && ackingId === selected.alert_id ? 'Acknowledging...' : 'Acknowledge'}
                 </button>
               </div>
+              {telemetryLoadedFor === selected?.object_id && (
+                <div className="mt-3 border-t border-white/[0.08] pt-2 space-y-1 max-h-28 overflow-y-auto custom-scrollbar">
+                  {telemetryRows.length === 0 ? (
+                    <div className="text-[10px] text-slate-500">No telemetry rows found.</div>
+                  ) : telemetryRows.map((row) => (
+                    <div key={row.telemetry_id} className="text-[10px] text-slate-300 flex justify-between gap-2">
+                      <span className="truncate">{row.parameter_name}</span>
+                      <span className="font-mono text-cyan-300 shrink-0">
+                        {row.value}{row.unit ? ` ${row.unit}` : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="text-[11px] font-medium text-slate-400 mt-4 mb-2">Space weather</div>
@@ -278,32 +392,53 @@ export default function Dashboard() {
 
             <div className="text-[11px] font-medium text-slate-400 mt-4 mb-2">Quick actions</div>
             <div className="space-y-1.5">
-              <button className="w-full text-left px-2.5 py-1.5 text-[11px] rounded border border-white/[0.08] text-slate-400 hover:bg-white/[0.05]">Export CDM report</button>
-              <button className="w-full text-left px-2.5 py-1.5 text-[11px] rounded border border-white/[0.08] text-slate-400 hover:bg-white/[0.05]">Schedule maneuver</button>
-              <button className="w-full text-left px-2.5 py-1.5 text-[11px] rounded border border-red-500/25 bg-red-500/10 text-red-300">Flag for review</button>
+              <button
+                className="w-full text-left px-2.5 py-1.5 text-[11px] rounded border border-white/[0.08] text-slate-400 hover:bg-white/[0.05] disabled:opacity-50"
+                disabled={!selected || quickActionBusy !== null}
+                onClick={handleExportReport}
+              >
+                {quickActionBusy === 'report' ? 'Exporting...' : 'Export CDM report'}
+              </button>
+              <button
+                className="w-full text-left px-2.5 py-1.5 text-[11px] rounded border border-white/[0.08] text-slate-400 hover:bg-white/[0.05] disabled:opacity-50"
+                disabled={!selected || quickActionBusy !== null}
+                onClick={handleScheduleManeuver}
+              >
+                {quickActionBusy === 'maneuver' ? 'Scheduling...' : 'Schedule maneuver'}
+              </button>
+              <button
+                className="w-full text-left px-2.5 py-1.5 text-[11px] rounded border border-red-500/25 bg-red-500/10 text-red-300 disabled:opacity-50"
+                disabled={!selected || quickActionBusy !== null}
+                onClick={handleFlagReview}
+              >
+                {quickActionBusy === 'review' ? 'Flagging...' : 'Flag for review'}
+              </button>
             </div>
+            {quickActionMsg && <div className="mt-2 text-[10px] text-slate-400">{quickActionMsg}</div>}
           </div>
         </div>
       </div>
 
-      <div className="h-11 border-t border-white/[0.06] bg-[#040810] flex items-center gap-3 px-3.5 shrink-0">
-        <div className="text-[11px] font-mono text-slate-500">{utcClock.replace(' UTC', '')}</div>
-        <div className="flex items-center gap-1">
-          <button className="w-6 h-6 rounded bg-white/[0.06] text-slate-400 text-xs">⏮</button>
-          <button className="w-6 h-6 rounded bg-blue-500/20 text-blue-300 text-xs" onClick={timeController.togglePlay}>
-            {timeController.isPlaying ? '⏸' : '▶'}
-          </button>
-          <button className="w-6 h-6 rounded bg-white/[0.06] text-slate-400 text-xs">⏭</button>
+      {!isOperator && (
+        <div className="h-11 border-t border-white/[0.06] bg-[#040810] flex items-center gap-3 px-3.5 shrink-0">
+          <div className="text-[11px] font-mono text-slate-500">{utcClock.replace(' UTC', '')}</div>
+          <div className="flex items-center gap-1">
+            <button className="w-6 h-6 rounded bg-white/[0.06] text-slate-400 text-xs">⏮</button>
+            <button className="w-6 h-6 rounded bg-blue-500/20 text-blue-300 text-xs" onClick={timeController.togglePlay}>
+              {timeController.isPlaying ? '⏸' : '▶'}
+            </button>
+            <button className="w-6 h-6 rounded bg-white/[0.06] text-slate-400 text-xs">⏭</button>
+          </div>
+          <div className="flex-1 h-[3px] rounded bg-white/[0.08] relative">
+            <div className="h-full w-[38%] bg-blue-500 rounded" />
+            <div className="absolute left-[38%] top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-blue-400 border border-blue-800" />
+            <div className="absolute left-[42%] -top-[3px] w-[3px] h-[9px] rounded bg-amber-500" />
+            <div className="absolute left-[61%] -top-[3px] w-[3px] h-[9px] rounded bg-red-500" />
+          </div>
+          <div className="text-[10px] text-amber-300 border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 rounded">1×</div>
+          <div className="text-[11px] font-mono text-slate-500 text-right min-w-[92px]">22 Apr — 23 Apr</div>
         </div>
-        <div className="flex-1 h-[3px] rounded bg-white/[0.08] relative">
-          <div className="h-full w-[38%] bg-blue-500 rounded" />
-          <div className="absolute left-[38%] top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-blue-400 border border-blue-800" />
-          <div className="absolute left-[42%] -top-[3px] w-[3px] h-[9px] rounded bg-amber-500" />
-          <div className="absolute left-[61%] -top-[3px] w-[3px] h-[9px] rounded bg-red-500" />
-        </div>
-        <div className="text-[10px] text-amber-300 border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 rounded">1×</div>
-        <div className="text-[11px] font-mono text-slate-500 text-right min-w-[92px]">22 Apr — 23 Apr</div>
-      </div>
+      )}
     </div>
   )
 }
