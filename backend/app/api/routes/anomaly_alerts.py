@@ -14,6 +14,7 @@ from app.schemas.anomaly_alert import (
 )
 from app.services.anomaly_explainer import AnomalyExplainer
 from app.services.report_generator import ReportGenerator
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/anomaly-alerts", tags=["Anomaly Detection"])
 
@@ -97,11 +98,18 @@ async def explain_anomaly(alert_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/reports/mission/{object_id}")
-async def get_mission_report(object_id: int, db: AsyncSession = Depends(get_db)):
+async def get_mission_report(
+    object_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     """Generate and download a mission health report PDF."""
     generator = ReportGenerator(db)
     try:
-        pdf_buffer = await generator.generate_mission_report(object_id)
+        pdf_buffer = await generator.generate_mission_report(
+            object_id,
+            generated_by_user_id=current_user.get("user_id"),
+        )
         return Response(
             content=pdf_buffer.getvalue(),
             media_type="application/pdf",
