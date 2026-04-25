@@ -28,6 +28,7 @@ from app.models.auth_api_key import AuthApiKey
 from app.models.auth_organization import AuthOrganization
 from app.models.auth_membership import AuthMembership
 from app.models.auth_login_event import AuthLoginEvent
+from app.models.mission_report import MissionReportLog
 
 __all__ = [
     "Operator",
@@ -59,4 +60,5 @@ __all__ = [
     "AuthOrganization",
     "AuthMembership",
     "AuthLoginEvent",
+    "MissionReportLog",
 ]
