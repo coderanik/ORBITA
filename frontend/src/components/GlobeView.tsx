@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { Viewer, Entity } from 'resium'
 import type { CesiumComponentRef } from 'resium'
-import { Cartesian3, Color, Ion, TileMapServiceImageryProvider, buildModuleUrl, Viewer as CesiumViewer, Entity as CesiumEntity, JulianDate } from 'cesium'
+import { Cartesian3, Color, Ion, SceneMode, TileMapServiceImageryProvider, UrlTemplateImageryProvider, buildModuleUrl, Viewer as CesiumViewer, Entity as CesiumEntity, JulianDate, Math as CesiumMath } from 'cesium'
 import type { AnomalyAlert } from '../types'
 import { WifiOff } from 'lucide-react'
 
@@ -23,6 +23,11 @@ interface GlobeViewProps {
   lastUpdated?: Date | null;
   currentTime?: Date;
   hideOverlays?: boolean;
+  enableDayNight?: boolean;
+  sceneMode?: '3d' | '2d';
+  showOrbits?: boolean;
+  autoRotateEarth?: boolean;
+  showRotationStats?: boolean;
 }
 
 export default function GlobeView({
@@ -34,23 +39,70 @@ export default function GlobeView({
   lastUpdated,
   currentTime,
   hideOverlays = false,
+  enableDayNight = true,
+  sceneMode = '3d',
+  showOrbits = false,
+  autoRotateEarth = false,
+  showRotationStats = false,
 }: GlobeViewProps) {
   const viewerRef = useRef<CesiumComponentRef<CesiumViewer>>(null);
+  const rotationFrameRef = useRef<number | null>(null)
+  const lastFrameTimeRef = useRef<number | null>(null)
 
-  // Replace the default Ion imagery with local NaturalEarthII textures if no token is set
+  // Always initialize imagery explicitly so the globe renders even if Ion is unavailable.
   useEffect(() => {
-    const setupOfflineImagery = async () => {
-      if (!import.meta.env.VITE_CESIUM_ION_TOKEN && viewerRef.current?.cesiumElement) {
-        const viewer = viewerRef.current.cesiumElement;
-        viewer.imageryLayers.removeAll();
-        const provider = await TileMapServiceImageryProvider.fromUrl(
+    let cancelled = false
+
+    const setupImagery = async () => {
+      const viewer = viewerRef.current?.cesiumElement
+      if (!viewer || cancelled) return
+
+      viewer.imageryLayers.removeAll()
+
+      try {
+        // Use satellite imagery so Earth looks like a physical globe.
+        const worldImagery = new UrlTemplateImageryProvider({
+          url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          credit: 'Esri, Maxar, Earthstar Geographics',
+        })
+        viewer.imageryLayers.addImageryProvider(worldImagery)
+      } catch {
+        // Fallback to bundled Cesium texture assets if remote imagery is unavailable.
+        const naturalEarth = await TileMapServiceImageryProvider.fromUrl(
           buildModuleUrl('Assets/Textures/NaturalEarthII')
-        );
-        viewer.imageryLayers.addImageryProvider(provider);
+        )
+        if (!cancelled) {
+          viewer.imageryLayers.addImageryProvider(naturalEarth)
+        }
       }
-    };
-    setupOfflineImagery();
-  }, []);
+
+      viewer.scene.globe.show = true
+      viewer.scene.globe.enableLighting = enableDayNight
+      if (viewer.scene.skyAtmosphere) {
+        viewer.scene.skyAtmosphere.show = enableDayNight
+      }
+
+      // Force an initial world view so we don't end up with an off-globe camera.
+      viewer.camera.setView({
+        destination: Cartesian3.fromDegrees(78.9629, 20.5937, 22_000_000),
+      })
+    }
+
+    const waitForViewerAndInit = () => {
+      if (cancelled) return
+      if (!viewerRef.current?.cesiumElement) {
+        requestAnimationFrame(waitForViewerAndInit)
+        return
+      }
+      void setupImagery()
+    }
+
+    waitForViewerAndInit()
+
+    return () => {
+      cancelled = true
+    }
+  }, [enableDayNight]);
 
   // Sync the external currentTime with Cesium's internal clock
   useEffect(() => {
@@ -58,6 +110,44 @@ export default function GlobeView({
       viewerRef.current.cesiumElement.clock.currentTime = JulianDate.fromDate(currentTime);
     }
   }, [currentTime]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current?.cesiumElement
+    if (!viewer) return
+    if (sceneMode === '2d' && viewer.scene.mode !== SceneMode.SCENE2D) {
+      viewer.scene.morphTo2D(0.8)
+    } else if (sceneMode === '3d' && viewer.scene.mode !== SceneMode.SCENE3D) {
+      viewer.scene.morphTo3D(0.8)
+    }
+  }, [sceneMode])
+
+  useEffect(() => {
+    const viewer = viewerRef.current?.cesiumElement
+    if (!viewer || !autoRotateEarth || sceneMode !== '3d') return
+
+    const siderealDaySeconds = 86164
+    const angularVelocityRadPerSec = (2 * Math.PI) / siderealDaySeconds
+
+    const animate = (timestamp: number) => {
+      if (lastFrameTimeRef.current == null) {
+        lastFrameTimeRef.current = timestamp
+      }
+      const deltaSec = (timestamp - lastFrameTimeRef.current) / 1000
+      lastFrameTimeRef.current = timestamp
+      viewer.camera.rotateRight(angularVelocityRadPerSec * deltaSec)
+      rotationFrameRef.current = requestAnimationFrame(animate)
+    }
+
+    rotationFrameRef.current = requestAnimationFrame(animate)
+
+    return () => {
+      if (rotationFrameRef.current != null) {
+        cancelAnimationFrame(rotationFrameRef.current)
+        rotationFrameRef.current = null
+      }
+      lastFrameTimeRef.current = null
+    }
+  }, [autoRotateEarth, sceneMode])
 
   const allSatIds = new Set<string>()
   Object.keys(realPositions).forEach(k => allSatIds.add(k))
@@ -79,15 +169,29 @@ export default function GlobeView({
     }
   }
 
+  const buildOrbitPath = (latDeg: number, lonDeg: number, altMeters: number) => {
+    const inclination = Math.max(5, Math.min(85, Math.abs(latDeg)))
+    const i = CesiumMath.toRadians(inclination)
+    const lon0 = CesiumMath.toRadians(lonDeg)
+    const points: Cartesian3[] = []
+    for (let deg = 0; deg <= 360; deg += 4) {
+      const u = CesiumMath.toRadians(deg)
+      const lat = Math.asin(Math.sin(i) * Math.sin(u))
+      const lon = lon0 + Math.atan2(Math.cos(i) * Math.sin(u), Math.cos(u))
+      points.push(Cartesian3.fromDegrees(CesiumMath.toDegrees(lon), CesiumMath.toDegrees(lat), altMeters))
+    }
+    return points
+  }
+
   return (
-    <div className="flex-1 bg-black relative">
+    <div className="h-full w-full bg-black relative">
       <Viewer
         ref={viewerRef}
         full
         timeline={false}
         animation={false}
-        baseLayerPicker={!!import.meta.env.VITE_CESIUM_ION_TOKEN}
-        baseLayer={import.meta.env.VITE_CESIUM_ION_TOKEN ? undefined : false}
+        baseLayerPicker={false}
+        baseLayer={false}
         geocoder={false}
         homeButton={true}
         sceneModePicker={true}
@@ -138,6 +242,20 @@ export default function GlobeView({
               />
             )
           }
+        })}
+        {showOrbits && Array.from(allSatIds).map((satId) => {
+          const pos = realPositions[satId]
+          if (!pos) return null
+          return (
+            <Entity
+              key={`orbit-${satId}`}
+              polyline={{
+                positions: buildOrbitPath(pos.lat, pos.lon, pos.alt || 400000),
+                width: 1.2,
+                material: Color.fromCssColorString('#60a5fa').withAlpha(0.5),
+              }}
+            />
+          )
         })}
       </Viewer>
 
@@ -194,6 +312,12 @@ export default function GlobeView({
           <span className="w-3 h-3 rounded-full bg-cyan-400 ring-1 ring-white ring-offset-1 ring-offset-transparent" /> Selected
         </div>
       </div>}
+
+      {showRotationStats && sceneMode === '3d' && (
+        <div className="absolute top-3 right-3 px-3 py-2 rounded-lg bg-slate-950/70 backdrop-blur-md border border-white/10 text-[10px] text-slate-300 pointer-events-none">
+          Earth rotation: 1670 km/h (0.0042 deg/s)
+        </div>
+      )}
     </div>
   )
 }
