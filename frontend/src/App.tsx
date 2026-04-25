@@ -72,6 +72,7 @@ function App() {
           <Route path="/admin/catalog/launch-vehicles" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
           <Route path="/admin/events/conjunctions" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
+          <Route path="/admin/events/maneuvers" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
           <Route path="/admin/tle" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
           <Route path="/admin/atsad" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
           <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']}><SystemOps /></ProtectedRoute>} />
