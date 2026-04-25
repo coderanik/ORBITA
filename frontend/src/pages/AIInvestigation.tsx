@@ -2,12 +2,15 @@ import { useState } from 'react'
 import Header from '../components/Header'
 import { API_BASE_URL } from '../api/orbita'
 import { useAuth } from '../contexts/useAuth'
+import { useSearchParams } from 'react-router-dom'
 import { BrainCircuit, Send, Loader2, FileText, AlertTriangle } from 'lucide-react'
 
 export default function AIInvestigation() {
   const { token } = useAuth()
-  const [alertId, setAlertId] = useState(1)
-  const [provider, setProvider] = useState('openai')
+  const [searchParams] = useSearchParams()
+  const initialAlertId = Number(searchParams.get('alertId')) || 1
+  const [alertId, setAlertId] = useState(initialAlertId)
+  const [provider, setProvider] = useState('gemini')
   const [isRunning, setIsRunning] = useState(false)
   const [report, setReport] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -60,8 +63,9 @@ export default function AIInvestigation() {
               <label className="text-xs text-slate-400 mb-1 block">LLM Provider</label>
               <select value={provider} onChange={e => setProvider(e.target.value)}
                 className="w-full bg-slate-900/50 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50">
-                <option value="openai">OpenAI (GPT-4o)</option>
-                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="gemini">Google Gemini (1.5 Pro)</option>
+                <option value="deepseek">DeepSeek (deepseek-chat)</option>
+                <option value="huggingface">Hugging Face (HF Router)</option>
               </select>
             </div>
             <button onClick={runInvestigation} disabled={isRunning}
