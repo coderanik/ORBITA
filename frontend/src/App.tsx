@@ -7,6 +7,7 @@ import Benchmark from './pages/Benchmark'
 import KesslerSimulator from './pages/KesslerSimulator'
 import AIInvestigation from './pages/AIInvestigation'
 import Admin from './pages/Admin'
+import LandingPage from './pages/LandingPage'
 import SystemOps from './pages/SystemOps'
 import Settings from './pages/Settings'
 import { AuthProvider } from './contexts/AuthContext'
@@ -17,7 +18,7 @@ type Role = 'viewer' | 'operator' | 'admin' | 'superadmin'
 function roleLandingPath(role?: string): string {
   if (role === 'admin') return '/admin'
   if (role === 'superadmin') return '/superadmin'
-  return '/'
+  return '/dashboard'
 }
 
 function ProtectedRoute({
@@ -59,8 +60,9 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<ProtectedRoute allowedRoles={['viewer', 'operator', 'admin', 'superadmin']}><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['viewer', 'operator', 'admin', 'superadmin']}><Dashboard /></ProtectedRoute>} />
           <Route path="/explorer" element={<ProtectedRoute allowedRoles={['operator', 'admin', 'superadmin']}><Explorer /></ProtectedRoute>} />
           <Route path="/benchmark" element={<ProtectedRoute allowedRoles={['operator', 'admin', 'superadmin']}><Benchmark /></ProtectedRoute>} />
           <Route path="/kessler" element={<ProtectedRoute allowedRoles={['viewer', 'operator', 'admin', 'superadmin']}><KesslerSimulator /></ProtectedRoute>} />
