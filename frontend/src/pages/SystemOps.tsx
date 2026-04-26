@@ -38,6 +38,27 @@ export default function SystemOps() {
     return new Date(status.generated_at).toLocaleTimeString()
   }, [status?.generated_at])
 
+  const readyMessages = status?.rabbitmq.messages_ready_total
+  const unackedMessages = status?.rabbitmq.messages_unacked_total
+  const brokerScale = Math.max(1, readyMessages ?? 0, unackedMessages ?? 0)
+  const readyWidthPct = readyMessages == null ? 0 : Math.min((readyMessages / brokerScale) * 100, 100)
+  const unackedWidthPct = unackedMessages == null ? 0 : Math.min((unackedMessages / brokerScale) * 100, 100)
+  const throughputBars = useMemo(() => {
+    const values = [
+      status?.celery.worker_count ?? 0,
+      status?.rabbitmq.queue_count ?? 0,
+      status?.redis.db_size ?? 0,
+      readyMessages ?? 0,
+      unackedMessages ?? 0,
+    ]
+    const max = Math.max(1, ...values)
+    return Array.from({ length: 40 }, (_, i) => {
+      const source = values[i % values.length]
+      const offset = ((i * 13) % 11) / 20
+      return Math.max(8, Math.min(92, Math.round(((source / max) * 100) + offset * 10)))
+    })
+  }, [status?.celery.worker_count, status?.rabbitmq.queue_count, status?.redis.db_size, readyMessages, unackedMessages])
+
   const StatusBadge = ({ ok, label }: { ok: boolean | null; label?: string }) => {
     if (ok === null) return <span className="px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500 border border-white/5 text-[10px] font-bold uppercase">Checking</span>
     if (ok) return <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase flex items-center gap-1"><Zap className="w-2.5 h-2.5" /> {label || 'Operational'}</span>
@@ -159,16 +180,13 @@ export default function SystemOps() {
                   <span className="text-[10px] text-slate-500 flex items-center gap-1"><Clock className="w-3 h-3" /> Real-time feed</span>
                 </div>
                 <div className="h-48 p-4 flex items-end gap-1 justify-between bg-black/20">
-                  {Array.from({ length: 40 }).map((_, i) => {
-                    const height = status?.api.ok ? (20 + Math.random() * 60) : 5
-                    return (
-                      <div 
-                        key={i} 
-                        className={`w-full rounded-t-sm transition-all duration-500 ${status?.api.ok ? 'bg-blue-500/30' : 'bg-red-500/20'}`} 
-                        style={{ height: `${height}%` }} 
-                      />
-                    )
-                  })}
+                  {throughputBars.map((height, i) => (
+                    <div
+                      key={i}
+                      className={`w-full rounded-t-sm transition-all duration-500 ${status?.api.ok ? 'bg-blue-500/30' : 'bg-red-500/20'}`}
+                      style={{ height: `${height}%` }}
+                    />
+                  ))}
                 </div>
                 <div className="p-4 bg-white/[0.02] flex justify-between">
                   <div className="text-center px-4 border-r border-white/5 flex-1">
@@ -271,27 +289,32 @@ export default function SystemOps() {
                       <div>
                         <div className="flex justify-between text-[10px] mb-1">
                           <span className="text-slate-400">Ready messages</span>
-                          <span className="font-mono text-slate-300">{status?.rabbitmq.messages_ready_total ?? 0}</span>
+                          <span className="font-mono text-slate-300">{readyMessages ?? 'N/A'}</span>
                         </div>
                         <div className="h-1.5 rounded bg-white/10 overflow-hidden">
                           <div
                             className="h-full bg-cyan-400"
-                            style={{ width: `${Math.min(((status?.rabbitmq.messages_ready_total ?? 0) / 100) * 100, 100)}%` }}
+                            style={{ width: `${readyWidthPct}%` }}
                           />
                         </div>
                       </div>
                       <div>
                         <div className="flex justify-between text-[10px] mb-1">
                           <span className="text-slate-400">Unacked messages</span>
-                          <span className="font-mono text-slate-300">{status?.rabbitmq.messages_unacked_total ?? 0}</span>
+                          <span className="font-mono text-slate-300">{unackedMessages ?? 'N/A'}</span>
                         </div>
                         <div className="h-1.5 rounded bg-white/10 overflow-hidden">
                           <div
                             className="h-full bg-amber-400"
-                            style={{ width: `${Math.min(((status?.rabbitmq.messages_unacked_total ?? 0) / 100) * 100, 100)}%` }}
+                            style={{ width: `${unackedWidthPct}%` }}
                           />
                         </div>
                       </div>
+                      {!status?.rabbitmq.ok && (
+                        <p className="text-[9px] text-amber-300">
+                          {status?.rabbitmq.error ?? 'RabbitMQ metrics unavailable (check management API).'}
+                        </p>
+                      )}
                     </div>
                   </div>
 

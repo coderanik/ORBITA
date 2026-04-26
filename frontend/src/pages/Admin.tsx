@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import Header from '../components/Header'
 import { API_BASE_URL } from '../api/orbita'
@@ -19,6 +19,15 @@ type SectionKey =
   | 'atsad-models'
   | 'atsad-runs'
 
+type FieldType = 'text' | 'number' | 'date' | 'datetime' | 'boolean' | 'json'
+
+type FieldConfig = {
+  name: string
+  label: string
+  type?: FieldType
+  placeholder?: string
+}
+
 const SECTION_ORDER: { key: SectionKey; label: string; path: string; icon: React.ElementType; group: string }[] = [
   { key: 'catalog-space-objects', label: 'Space Objects', path: '/admin/catalog/space-objects', icon: Satellite, group: 'Catalog' },
   { key: 'catalog-operators', label: 'Operators', path: '/admin/catalog/operators', icon: Building2, group: 'Catalog' },
@@ -33,6 +42,94 @@ const SECTION_ORDER: { key: SectionKey; label: string; path: string; icon: React
   { key: 'atsad-models', label: 'Models', path: '/admin/atsad?tab=models', icon: Cpu, group: 'ATSAD Bench' },
   { key: 'atsad-runs', label: 'Runs', path: '/admin/atsad?tab=runs', icon: Play, group: 'ATSAD Bench' },
 ]
+
+const SECTION_FIELDS: Record<SectionKey, FieldConfig[]> = {
+  'catalog-space-objects': [
+    { name: 'name', label: 'Name', placeholder: 'STARLINK-2637' },
+    { name: 'object_type', label: 'Object Type', placeholder: 'SATELLITE | DEBRIS | ROCKET_BODY' },
+    { name: 'norad_id', label: 'NORAD ID', type: 'number' },
+    { name: 'cospar_id', label: 'COSPAR ID' },
+    { name: 'orbit_class', label: 'Orbit Class', placeholder: 'LEO | MEO | GEO | HEO | SSO' },
+    { name: 'status', label: 'Status', placeholder: 'ACTIVE | INACTIVE | DECAYED | UNKNOWN' },
+    { name: 'country_code', label: 'Country Code' },
+    { name: 'operator', label: 'Operator' },
+  ],
+  'catalog-operators': [
+    { name: 'name', label: 'Name' },
+    { name: 'short_name', label: 'Short Name' },
+    { name: 'country_code', label: 'Country Code' },
+    { name: 'operator_type', label: 'Operator Type', placeholder: 'COMMERCIAL | GOVERNMENT | DEFENSE | ACADEMIC' },
+  ],
+  'catalog-missions': [
+    { name: 'name', label: 'Mission Name' },
+    { name: 'description', label: 'Description' },
+    { name: 'start_date', label: 'Start Date', type: 'date' },
+    { name: 'end_date', label: 'End Date', type: 'date' },
+    { name: 'status', label: 'Status' },
+  ],
+  'catalog-ground-stations': [
+    { name: 'name', label: 'Station Name' },
+    { name: 'station_code', label: 'Station Code' },
+    { name: 'country_code', label: 'Country Code' },
+    { name: 'latitude_deg', label: 'Latitude', type: 'number' },
+    { name: 'longitude_deg', label: 'Longitude', type: 'number' },
+    { name: 'is_active', label: 'Active', type: 'boolean' },
+  ],
+  'catalog-launch-vehicles': [
+    { name: 'name', label: 'Vehicle Name' },
+    { name: 'manufacturer', label: 'Manufacturer' },
+    { name: 'vehicle_type', label: 'Vehicle Type' },
+    { name: 'payload_capacity_kg', label: 'Payload Capacity (kg)', type: 'number' },
+  ],
+  users: [
+    { name: 'username', label: 'Username' },
+    { name: 'email', label: 'Email' },
+    { name: 'full_name', label: 'Full Name' },
+    { name: 'role', label: 'Role', placeholder: 'viewer | operator | admin | superadmin' },
+    { name: 'password', label: 'Password' },
+    { name: 'org_id', label: 'Organization ID', type: 'number' },
+    { name: 'is_active', label: 'Active', type: 'boolean' },
+  ],
+  'events-conjunctions': [
+    { name: 'primary_object_id', label: 'Primary Object ID', type: 'number' },
+    { name: 'secondary_object_id', label: 'Secondary Object ID', type: 'number' },
+    { name: 'time_of_closest_approach', label: 'TCA', type: 'datetime' },
+    { name: 'miss_distance_km', label: 'Miss Distance (km)', type: 'number' },
+    { name: 'collision_probability', label: 'Collision Probability', type: 'number' },
+    { name: 'risk_level', label: 'Risk Level' },
+    { name: 'status', label: 'Status' },
+  ],
+  'events-maneuvers': [
+    { name: 'object_id', label: 'Object ID', type: 'number' },
+    { name: 'planned_time', label: 'Planned Time', type: 'datetime' },
+    { name: 'delta_v_m_s', label: 'Delta-V (m/s)', type: 'number' },
+    { name: 'status', label: 'Status' },
+    { name: 'notes', label: 'Notes' },
+  ],
+  tle: [],
+  'atsad-datasets': [
+    { name: 'name', label: 'Dataset Name' },
+    { name: 'description', label: 'Description' },
+    { name: 'task_type', label: 'Task Type' },
+    { name: 'domain', label: 'Domain' },
+    { name: 'num_channels', label: 'Channels', type: 'number' },
+    { name: 'source', label: 'Source' },
+  ],
+  'atsad-models': [
+    { name: 'name', label: 'Model Name' },
+    { name: 'model_type', label: 'Model Type' },
+    { name: 'architecture', label: 'Architecture' },
+    { name: 'version', label: 'Version' },
+    { name: 'context_strategy', label: 'Context Strategy' },
+    { name: 'is_baseline', label: 'Baseline', type: 'boolean' },
+  ],
+  'atsad-runs': [
+    { name: 'dataset_id', label: 'Dataset ID', type: 'number' },
+    { name: 'model_id', label: 'Model ID', type: 'number' },
+    { name: 'status', label: 'Status' },
+    { name: 'metadata_', label: 'Metadata (JSON)', type: 'json', placeholder: '{"source":"manual"}' },
+  ],
+}
 
 async function apiFetch(path: string, init?: RequestInit) {
   const token = localStorage.getItem('orbita_token')
@@ -62,7 +159,7 @@ export default function Admin() {
   const [items, setItems] = useState<Record<string, unknown>[]>([])
   const [selected, setSelected] = useState<Record<string, unknown> | null>(null)
   const [loading, setLoading] = useState(false)
-  const [formText, setFormText] = useState('{}')
+  const [formValues, setFormValues] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<string | null>(null)
   const [apiKeys, setApiKeys] = useState<Record<string, unknown>[]>([])
   const [newApiKeyName, setNewApiKeyName] = useState('default-service-key')
@@ -123,16 +220,108 @@ export default function Admin() {
     }
   }, [section])
 
+  const currentFields = SECTION_FIELDS[section] ?? []
+
+  const getFieldType = useCallback((fieldName: string): FieldType => {
+    return currentFields.find((f) => f.name === fieldName)?.type ?? 'text'
+  }, [currentFields])
+
+  const createBlankForm = useCallback(() => {
+    const blank: Record<string, string> = {}
+    currentFields.forEach((field) => {
+      if (field.type === 'boolean') blank[field.name] = 'false'
+      else blank[field.name] = ''
+    })
+    return blank
+  }, [currentFields])
+
+  const mapRecordToFormValues = useCallback((record: Record<string, unknown>) => {
+    const values: Record<string, string> = {}
+    currentFields.forEach((field) => {
+      const value = record[field.name]
+      if (value === null || value === undefined) {
+        values[field.name] = field.type === 'boolean' ? 'false' : ''
+      } else if (typeof value === 'object') {
+        values[field.name] = JSON.stringify(value)
+      } else {
+        values[field.name] = String(value)
+      }
+    })
+    return values
+  }, [currentFields])
+
+  const parseFormPayload = useCallback(() => {
+    const payload: Record<string, unknown> = {}
+    Object.entries(formValues).forEach(([key, raw]) => {
+      const value = raw.trim()
+      if (value === '') return
+      const type = getFieldType(key)
+      if (type === 'number') {
+        const parsed = Number(value)
+        if (!Number.isNaN(parsed)) payload[key] = parsed
+        return
+      }
+      if (type === 'boolean') {
+        payload[key] = value === 'true'
+        return
+      }
+      if (type === 'json') {
+        try {
+          payload[key] = JSON.parse(value)
+        } catch {
+          payload[key] = value
+        }
+        return
+      }
+      payload[key] = value
+    })
+    return payload
+  }, [formValues, getFieldType])
+
+  const withPagination = useCallback((path: string, offset: number, limit: number) => {
+    const [base, queryString = ''] = path.split('?')
+    const params = new URLSearchParams(queryString)
+    params.set('offset', String(offset))
+    params.set('limit', String(limit))
+    return `${base}?${params.toString()}`
+  }, [])
+
+  const fetchAllItems = useCallback(async (path: string) => {
+    const limit = 200
+    let offset = 0
+    let total = Number.POSITIVE_INFINITY
+    let pages = 0
+    const collected: Record<string, unknown>[] = []
+
+    while (offset < total && pages < 50) {
+      const data = await apiFetch(withPagination(path, offset, limit))
+      const normalized = Array.isArray(data) ? data : (data?.items ?? [])
+      const rows = Array.isArray(normalized) ? normalized : []
+
+      if (rows.length === 0) break
+      collected.push(...rows)
+      pages += 1
+
+      if (!Array.isArray(data) && typeof data?.total === 'number') {
+        total = data.total
+      } else if (rows.length < limit) {
+        break
+      }
+      offset += limit
+    }
+
+    return collected
+  }, [withPagination])
+
   const loadItems = async () => {
     if (!tabConfig) return
     setLoading(true)
     setMessage(null)
     try {
-      const data = await apiFetch(tabConfig.list)
-      const normalized = Array.isArray(data) ? data : (data?.items ?? [])
-      setItems(normalized)
+      const allRows = await fetchAllItems(tabConfig.list)
+      setItems(allRows)
       setSelected(null)
-      setFormText('{}')
+      setFormValues(createBlankForm())
     } catch (err) {
       setMessage((err as Error).message)
     } finally {
@@ -146,15 +335,17 @@ export default function Admin() {
 
   useEffect(() => {
     if (selected) {
-      setFormText(JSON.stringify(selected, null, 2))
+      setFormValues(mapRecordToFormValues(selected))
       setIssuedKey(null)
+    } else {
+      setFormValues(createBlankForm())
     }
-  }, [selected])
+  }, [selected, mapRecordToFormValues, createBlankForm])
 
   const handleCreate = async () => {
     if (!tabConfig) return
     try {
-      const payload = JSON.parse(formText)
+      const payload = parseFormPayload()
       const created = await apiFetch(tabConfig.create, { method: 'POST', body: JSON.stringify(payload) })
       setMessage('Created successfully')
       setSelected(created)
@@ -167,7 +358,7 @@ export default function Admin() {
   const handleUpdate = async () => {
     if (!tabConfig || !selected) return
     try {
-      const payload = JSON.parse(formText)
+      const payload = parseFormPayload()
       const idValue = selected[tabConfig.id]
       const updated = await apiFetch(`${tabConfig.create}${idValue}`, { method: 'PATCH', body: JSON.stringify(payload) })
       setMessage('Updated successfully')
@@ -217,7 +408,7 @@ export default function Admin() {
       const idValue = selected[tabConfig.id]
       const updated = await apiFetch(`${tabConfig.create}${idValue}`, { method: 'PATCH', body: JSON.stringify({ status }) })
       setSelected(updated)
-      setFormText(JSON.stringify(updated, null, 2))
+      setFormValues(mapRecordToFormValues(updated))
       setMessage(`Conjunction status -> ${status}`)
       await loadItems()
     } catch (err) {
@@ -379,7 +570,7 @@ export default function Admin() {
                     <p className="text-[10px] text-slate-500 mt-0.5">{items.length} entries loaded</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => { setSelected(null); setFormText('{}'); setConfirmDelete(false) }} className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors" title="New record">
+                    <button onClick={() => { setSelected(null); setFormValues(createBlankForm()); setConfirmDelete(false) }} className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors" title="New record">
                       <Plus className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={() => void loadItems()} className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors" title="Refresh">
@@ -438,7 +629,7 @@ export default function Admin() {
                     <Pencil className="w-3.5 h-3.5 text-blue-400" />
                     {selected ? 'Edit Record' : 'New Record'}
                   </h2>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Edit JSON payload then Create, Update, or Delete.</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Fill fields and Create, Update, or Delete. Changes are persisted to database API.</p>
                 </div>
                 <div className="flex-1 p-4">
                   {section === 'users' && canManageUsers && (
@@ -463,7 +654,11 @@ export default function Admin() {
                                 password: 'ChangeMe123!',
                               }
                               setSelected(null)
-                              setFormText(JSON.stringify(base, null, 2))
+                              const mapped = createBlankForm()
+                              Object.entries(base).forEach(([key, value]) => {
+                                mapped[key] = value == null ? '' : String(value)
+                              })
+                              setFormValues(mapped)
                             }}
                           >
                             New {preset.label}
@@ -472,12 +667,40 @@ export default function Admin() {
                       </div>
                     </div>
                   )}
-                  <textarea
-                    value={formText}
-                    onChange={(e) => setFormText(e.target.value)}
-                    className="w-full min-h-[280px] bg-black/40 border border-white/[0.08] rounded-xl p-4 font-mono text-xs text-emerald-300 leading-relaxed focus:outline-none focus:ring-1 focus:ring-blue-500/40 transition-all resize-none custom-scrollbar"
-                    spellCheck={false}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {currentFields.map((field) => (
+                      <div key={field.name} className={field.type === 'json' ? 'md:col-span-2' : ''}>
+                        <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1.5">
+                          {field.label}
+                        </label>
+                        {field.type === 'boolean' ? (
+                          <select
+                            value={formValues[field.name] ?? 'false'}
+                            onChange={(e) => setFormValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
+                            className="w-full bg-black/40 border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500/40"
+                          >
+                            <option value="false">False</option>
+                            <option value="true">True</option>
+                          </select>
+                        ) : field.type === 'json' ? (
+                          <textarea
+                            value={formValues[field.name] ?? ''}
+                            onChange={(e) => setFormValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
+                            placeholder={field.placeholder ?? '{}'}
+                            className="w-full min-h-[96px] bg-black/40 border border-white/[0.08] rounded-xl px-3 py-2 font-mono text-xs text-emerald-300 focus:outline-none focus:ring-1 focus:ring-blue-500/40 resize-y"
+                          />
+                        ) : (
+                          <input
+                            type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : field.type === 'datetime' ? 'datetime-local' : 'text'}
+                            value={formValues[field.name] ?? ''}
+                            onChange={(e) => setFormValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
+                            placeholder={field.placeholder ?? field.name}
+                            className="w-full bg-black/40 border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500/40"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="p-4 border-t border-white/[0.06] space-y-3">
                   <div className="flex gap-2">

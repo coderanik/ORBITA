@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import Header from '../components/Header'
 import { fetchLeaderboard, evaluateAtsadRun, fetchAtsadRunsList, fetchAtsadStats, seedAndEvaluateAtsadDemo, type AtsadRunListItem } from '../api/orbita'
 import type { LeaderboardEntry } from '../types'
@@ -51,6 +51,7 @@ function SummaryCard({ label, value, icon: Icon, color }: { label: string; value
 export default function Benchmark() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [sortKey, setSortKey] = useState('atsad_composite_score')
   const [sortAsc, setSortAsc] = useState(false)
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
@@ -64,26 +65,41 @@ export default function Benchmark() {
   const [runTotal, setRunTotal] = useState(0)
   const [demoLoading, setDemoLoading] = useState(false)
 
-  const loadData = async () => {
-    setLoading(true)
-    const [data, stats, runs] = await Promise.all([
-      fetchLeaderboard(),
-      fetchAtsadStats(),
-      fetchAtsadRunsList(100),
-    ])
-    setEntries(data)
-    setModelTotal(stats.modelTotal)
-    setRunTotal(stats.runTotal)
-    setAtsadRuns(runs)
-    if (!runId.trim() && runs.length > 0) {
-      setRunId(String(runs[0].run_id))
+  const parse01Series = useCallback((text: string): number[] => {
+    return text
+      .split(/[,\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => Number(s))
+      .filter((n) => n === 0 || n === 1)
+  }, [])
+
+  const loadData = useCallback(async (mode: 'initial' | 'refresh' = 'refresh') => {
+    if (mode === 'initial') setLoading(true)
+    else setRefreshing(true)
+
+    try {
+      const [data, stats, runs] = await Promise.all([
+        fetchLeaderboard(),
+        fetchAtsadStats(),
+        fetchAtsadRunsList(100),
+      ])
+      setEntries(data)
+      setModelTotal(stats.modelTotal)
+      setRunTotal(stats.runTotal)
+      setAtsadRuns(runs)
+      setRunId((prev) => (prev.trim() ? prev : (runs.length > 0 ? String(runs[0].run_id) : prev)))
+    } catch {
+      setSubmitMsg('Failed to refresh leaderboard data.')
+    } finally {
+      if (mode === 'initial') setLoading(false)
+      else setRefreshing(false)
     }
-    setLoading(false)
-  }
+  }, [])
 
   useEffect(() => {
-    void loadData()
-  }, [])
+    void loadData('initial')
+  }, [loadData])
 
   const handleDemoSeed = async () => {
     const yTrue = parse01Series(yTrueInput)
@@ -102,7 +118,7 @@ export default function Benchmark() {
     if (out.ok) {
       if (out.runId) setRunId(String(out.runId))
       setSubmitMsg(`Demo complete — run #${out.runId}. Leaderboard updated.`)
-      await loadData()
+      await loadData('refresh')
     } else {
       setSubmitMsg(out.error ? `Demo failed: ${out.error}` : 'Demo failed.')
       if (out.runId) setRunId(String(out.runId))
@@ -113,32 +129,29 @@ export default function Benchmark() {
   const fmt = (v: number | undefined | null, decimals = 3) =>
     v != null ? v.toFixed(decimals) : '—'
 
-  const sorted = [...entries].sort((a, b) => {
-    const va = (a[sortKey as keyof typeof a]) ?? -Infinity
-    const vb = (b[sortKey as keyof typeof b]) ?? -Infinity
-    return sortAsc ? (va as number) - (vb as number) : (vb as number) - (va as number)
-  })
+  const sorted = useMemo(() => {
+    return [...entries].sort((a, b) => {
+      const va = (a[sortKey as keyof typeof a]) ?? -Infinity
+      const vb = (b[sortKey as keyof typeof b]) ?? -Infinity
+      return sortAsc ? (va as number) - (vb as number) : (vb as number) - (va as number)
+    })
+  }, [entries, sortKey, sortAsc])
 
-  const bestScore = entries.length > 0
-    ? Math.max(...entries.map(e => e.atsad_composite_score ?? 0))
-    : 0
+  const bestScore = useMemo(() => (
+    entries.length > 0 ? Math.max(...entries.map((e) => e.atsad_composite_score ?? 0)) : 0
+  ), [entries])
 
-  const modelTypes = [...new Set(entries.map(e => e.model_type).filter(Boolean))]
+  const modelTypes = useMemo(() => [...new Set(entries.map((e) => e.model_type).filter(Boolean))], [entries])
+  const derivedModelTotal = useMemo(() => [...new Set(entries.map((e) => e.model_name))].length, [entries])
+  const displayedModelTotal = modelTotal || derivedModelTotal
+  const displayedRunTotal = runTotal || entries.length
+  const runIsInList = useMemo(() => atsadRuns.some((r) => String(r.run_id) === runId), [atsadRuns, runId])
 
   const modelTypeColors: Record<string, string> = {
     LLM: 'bg-purple-500/15 text-purple-300 border-purple-500/25',
     DEEP_LEARNING: 'bg-blue-500/15 text-blue-300 border-blue-500/25',
     STATISTICAL: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/25',
     HYBRID: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
-  }
-
-  const parse01Series = (text: string): number[] => {
-    return text
-      .split(/[,\s]+/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((s) => Number(s))
-      .filter((n) => n === 0 || n === 1)
   }
 
   const submitEvaluation = async () => {
@@ -169,7 +182,7 @@ export default function Benchmark() {
     })
     if (result.ok) {
       setSubmitMsg('Evaluation submitted and leaderboard refreshed.')
-      await loadData()
+      await loadData('refresh')
     } else {
       setSubmitMsg(result.error ?? 'Evaluation failed.')
     }
@@ -195,18 +208,18 @@ export default function Benchmark() {
                 <p className="text-slate-400 mt-0.5">ATSADBench — anomaly detection model leaderboard and evaluation runs</p>
               </div>
               <button
-                onClick={loadData}
-                disabled={loading}
+                onClick={() => void loadData('refresh')}
+                disabled={loading || refreshing}
                 className="ml-auto flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-white/10 text-sm transition-all"
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+                <RefreshCw className={`w-4 h-4 ${(loading || refreshing) ? 'animate-spin' : ''}`} /> Refresh
               </button>
             </div>
 
             {/* Summary cards */}
             <div className="flex gap-3 mt-6">
-              <SummaryCard label="Registered Models" value={`${modelTotal || [...new Set(entries.map(e => e.model_name))].length}`} icon={Hash} color="border-blue-500/20 text-blue-400" />
-              <SummaryCard label="Eval runs" value={`${runTotal || entries.length}`} icon={BarChart3} color="border-purple-500/20 text-purple-400" />
+              <SummaryCard label="Registered Models" value={`${displayedModelTotal}`} icon={Hash} color="border-blue-500/20 text-blue-400" />
+              <SummaryCard label="Eval runs" value={`${displayedRunTotal}`} icon={BarChart3} color="border-purple-500/20 text-purple-400" />
               <SummaryCard label="Best ATSAD Score" value={bestScore > 0 ? bestScore.toFixed(4) : '—'} icon={Target} color="border-yellow-500/20 text-yellow-400" />
               <SummaryCard label="Model Types" value={`${modelTypes.length}`} icon={Zap} color="border-cyan-500/20 text-cyan-400" />
             </div>
@@ -224,7 +237,7 @@ export default function Benchmark() {
                 <label className="text-[10px] text-slate-500 uppercase tracking-wider">Run</label>
                 <div className="flex gap-2">
                   <select
-                    value={atsadRuns.some((r) => String(r.run_id) === runId) ? runId : ''}
+                    value={runIsInList ? runId : ''}
                     onChange={(e) => {
                       if (e.target.value) setRunId(e.target.value)
                     }}

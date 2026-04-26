@@ -23,9 +23,10 @@ export default function KesslerSimulator() {
   const [result, setResult] = useState<SimResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<{stage:string;progress:number}|null>(null)
+  const [progressHistory, setProgressHistory] = useState<{stage:string;progress:number;at:string}[]>([])
 
   const startSim = async () => {
-    setIsRunning(true); setResult(null); setError(null); setProgress(null)
+    setIsRunning(true); setResult(null); setError(null); setProgress(null); setProgressHistory([])
     try {
       const res = await fetch(`${API_BASE_URL}/kessler/simulate`, {
         method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
@@ -42,12 +43,29 @@ export default function KesslerSimulator() {
         const d = await r.json()
         if(d.status==='SUCCESS'){setResult(d.result);setIsRunning(false)}
         else if(d.status==='FAILURE'){setError(d.error);setIsRunning(false)}
-        else{if(d.meta)setProgress(d.meta);setTimeout(fn,2000)}
+        else{
+          if(d.meta){
+            setProgress(d.meta)
+            setProgressHistory((prev) => {
+              if (prev.length > 0 && prev[prev.length - 1].stage === d.meta.stage) return prev
+              return [...prev, { stage: d.meta.stage, progress: d.meta.progress, at: new Date().toLocaleTimeString() }]
+            })
+          }
+          setTimeout(fn,2000)
+        }
       } catch{setError('Lost connection');setIsRunning(false)}
     }; fn()
   }
 
   const inputCls = "w-full bg-slate-900/50 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50"
+  const impactEnergyGj = 0.5 * impactorMass * Math.pow(relVelocity * 1000, 2) / 1e9
+  const propagationCoverage = result ? ((result.propagated_fragments / Math.max(result.total_fragments, 1)) * 100) : 0
+  const nearestConjunction = result?.top_conjunctions?.[0]?.dist_km ?? null
+  const cascadeRisk =
+    !result ? 'UNKNOWN' : result.cascading_conjunctions > 100 ? 'SEVERE' : result.cascading_conjunctions > 20 ? 'ELEVATED' : 'MODERATE'
+  const riskScore = !result ? 0 : Math.min(100, Math.round((result.cascading_conjunctions / 150) * 100))
+  const fragmentScore = !result ? 0 : Math.min(100, Math.round((result.total_fragments / 5000) * 100))
+  const cascadeScore = !result ? 0 : Math.min(100, Math.round((result.cascading_conjunctions / 200) * 100))
 
   return (
     <div className="h-screen w-full flex flex-col bg-[#04060b] text-slate-200 overflow-hidden font-['Inter'] pt-[4.5rem]">
@@ -91,8 +109,91 @@ export default function KesslerSimulator() {
                 <div className="bg-slate-900/50 rounded-xl border border-white/5 p-4 text-center"><div className="text-2xl font-bold text-amber-400">{result.cascading_conjunctions}</div><div className="text-[10px] text-slate-500 uppercase mt-1">Cascading</div></div>
               </div>
               {result.top_conjunctions.length>0 && <div className="bg-slate-950/50 rounded-xl border border-white/5 overflow-hidden"><table className="w-full text-xs"><thead><tr className="border-b border-white/5 text-slate-500 uppercase"><th className="px-4 py-2 text-left">Obj 1</th><th className="px-4 py-2 text-left">Obj 2</th><th className="px-4 py-2 text-right">Miss Dist</th></tr></thead><tbody>{result.top_conjunctions.map((c,i)=><tr key={i} className="border-b border-white/[0.03] hover:bg-white/[0.02]"><td className="px-4 py-2 text-slate-300 font-mono">{c.obj1}</td><td className="px-4 py-2 text-slate-300 font-mono">{c.obj2}</td><td className="px-4 py-2 text-right text-amber-400 font-mono">{c.dist_km} km</td></tr>)}</tbody></table></div>}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-900/50 rounded-xl border border-white/5 p-3">
+                  <div className="text-[10px] text-slate-500 uppercase">Propagation coverage</div>
+                  <div className="text-lg text-cyan-300 font-semibold">{propagationCoverage.toFixed(1)}%</div>
+                </div>
+                <div className="bg-slate-900/50 rounded-xl border border-white/5 p-3">
+                  <div className="text-[10px] text-slate-500 uppercase">Nearest miss</div>
+                  <div className="text-lg text-amber-300 font-semibold">{nearestConjunction != null ? `${nearestConjunction.toFixed(3)} km` : 'N/A'}</div>
+                </div>
+                <div className="bg-slate-900/50 rounded-xl border border-white/5 p-3">
+                  <div className="text-[10px] text-slate-500 uppercase">Cascade risk</div>
+                  <div className={`text-lg font-semibold ${cascadeRisk === 'SEVERE' ? 'text-red-300' : cascadeRisk === 'ELEVATED' ? 'text-orange-300' : 'text-emerald-300'}`}>{cascadeRisk}</div>
+                </div>
+                <div className="bg-slate-900/50 rounded-xl border border-white/5 p-3">
+                  <div className="text-[10px] text-slate-500 uppercase">Impact energy</div>
+                  <div className="text-lg text-violet-300 font-semibold">{impactEnergyGj.toFixed(2)} GJ</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-slate-900/45 border border-white/5 rounded-xl p-3">
+                  <div className="text-[10px] text-slate-500 uppercase mb-2">Cascade risk gauge</div>
+                  <div className="relative h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${riskScore >= 70 ? 'bg-gradient-to-r from-orange-500 to-red-500' : riskScore >= 40 ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-gradient-to-r from-emerald-500 to-lime-500'}`}
+                      style={{ width: `${riskScore}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">Score</span>
+                    <span className="font-mono text-slate-300">{riskScore}/100</span>
+                  </div>
+                </div>
+                <div className="bg-slate-900/45 border border-white/5 rounded-xl p-3">
+                  <div className="text-[10px] text-slate-500 uppercase mb-2">Simulation intensity</div>
+                  <div className="space-y-2">
+                    <div>
+                      <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                        <span>Fragment load</span><span>{fragmentScore}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-slate-800">
+                        <div className="h-full rounded-full bg-red-500" style={{ width: `${fragmentScore}%` }} />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                        <span>Propagation coverage</span><span>{Math.round(propagationCoverage)}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-slate-800">
+                        <div className="h-full rounded-full bg-cyan-500" style={{ width: `${Math.min(100, propagationCoverage)}%` }} />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                        <span>Cascade pressure</span><span>{cascadeScore}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-slate-800">
+                        <div className="h-full rounded-full bg-amber-500" style={{ width: `${cascadeScore}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-slate-900/40 border border-white/5 rounded-xl p-3 text-xs text-slate-300">
+                <div className="text-[10px] text-slate-500 uppercase mb-1">Interpretation</div>
+                This scenario models a <span className="text-white font-semibold">{targetMass.toLocaleString()} kg</span> target with a{' '}
+                <span className="text-white font-semibold">{impactorMass.toLocaleString()} kg</span> impactor at{' '}
+                <span className="text-white font-semibold">{relVelocity.toFixed(1)} km/s</span>, producing{' '}
+                <span className="text-red-300 font-semibold">{result.total_fragments.toLocaleString()}</span> fragments and{' '}
+                <span className="text-amber-300 font-semibold">{result.cascading_conjunctions}</span> candidate cascade events.
+              </div>
               <div className="text-[10px] text-slate-600 flex items-center gap-1"><Clock className="w-3 h-3"/>ID: {result.sim_id}</div>
             </div>}
+            {progressHistory.length > 0 && (
+              <div className="bg-slate-950/40 rounded-xl border border-white/5 p-3">
+                <div className="text-[10px] text-slate-500 uppercase mb-2">Execution timeline</div>
+                <div className="space-y-1.5">
+                  {progressHistory.map((item, idx) => (
+                    <div key={`${item.stage}-${idx}`} className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-300">{item.stage.replace(/_/g, ' ')}</span>
+                      <span className="text-slate-500 font-mono">{item.progress}% · {item.at}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
