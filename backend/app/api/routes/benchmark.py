@@ -380,9 +380,11 @@ async def evaluate_predictions(
     )
 
     # Store result
+    allowed_result_fields = {col.name for col in BenchmarkResult.__table__.columns}
+    result_payload = {k: v for k, v in eval_result.to_dict().items() if k in allowed_result_fields}
     result_obj = BenchmarkResult(
         run_id=payload.run_id,
-        **eval_result.to_dict(),
+        **result_payload,
     )
     db.add(result_obj)
 
