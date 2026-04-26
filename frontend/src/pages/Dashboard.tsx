@@ -30,6 +30,7 @@ export default function Dashboard() {
   const [telemetryLoadedFor, setTelemetryLoadedFor] = useState<number | null>(null)
   const [quickActionBusy, setQuickActionBusy] = useState<'report' | 'maneuver' | 'review' | null>(null)
   const [quickActionMsg, setQuickActionMsg] = useState<string | null>(null)
+  const [timelineFallbackNow] = useState(() => Date.now())
 
   // Phase 4: Time controller for timeline scrubbing
   const timeController = useTimeController()
@@ -134,13 +135,13 @@ export default function Dashboard() {
     return [...anomalyTimes, ...conjunctionTimes].filter((t) => Number.isFinite(t))
   }, [anomalies, conjunctions])
   const timelineStartMs = useMemo(() => {
-    if (timelineEventsMs.length === 0) return Date.now() - (12 * 60 * 60 * 1000)
+    if (timelineEventsMs.length === 0) return timelineFallbackNow - (12 * 60 * 60 * 1000)
     return Math.min(...timelineEventsMs) - (30 * 60 * 1000)
-  }, [timelineEventsMs])
+  }, [timelineEventsMs, timelineFallbackNow])
   const timelineEndMs = useMemo(() => {
-    if (timelineEventsMs.length === 0) return Date.now() + (12 * 60 * 60 * 1000)
+    if (timelineEventsMs.length === 0) return timelineFallbackNow + (12 * 60 * 60 * 1000)
     return Math.max(...timelineEventsMs) + (30 * 60 * 1000)
-  }, [timelineEventsMs])
+  }, [timelineEventsMs, timelineFallbackNow])
   const timelineProgress = useMemo(() => {
     const span = Math.max(timelineEndMs - timelineStartMs, 1)
     return Math.min(100, Math.max(0, ((timeController.currentTime.getTime() - timelineStartMs) / span) * 100))

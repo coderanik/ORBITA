@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Header from '../components/Header'
 import { useAuth } from '../contexts/useAuth'
 import { Key, Bell, Globe, User, Shield, Moon, Sun, Monitor, BellRing, BellOff } from 'lucide-react'
@@ -8,45 +8,57 @@ type TimeFormat = 'utc' | 'local'
 
 const PREFERENCES_STORAGE_KEY = 'orbita-user-preferences'
 
+type StoredPreferences = {
+  theme: string
+  mapDefault: string
+  timeFormat: TimeFormat
+  soundEnabled: boolean
+  emailAlerts: boolean
+}
+
+function readStoredPreferences(): StoredPreferences {
+  const defaults: StoredPreferences = {
+    theme: 'system',
+    mapDefault: '3d',
+    timeFormat: 'utc',
+    soundEnabled: true,
+    emailAlerts: true,
+  }
+
+  try {
+    const raw = localStorage.getItem(PREFERENCES_STORAGE_KEY)
+    if (!raw) return defaults
+    const saved = JSON.parse(raw) as Partial<StoredPreferences>
+    return {
+      theme: saved.theme ?? defaults.theme,
+      mapDefault: saved.mapDefault ?? defaults.mapDefault,
+      timeFormat: saved.timeFormat === 'local' ? 'local' : defaults.timeFormat,
+      soundEnabled: typeof saved.soundEnabled === 'boolean' ? saved.soundEnabled : defaults.soundEnabled,
+      emailAlerts: typeof saved.emailAlerts === 'boolean' ? saved.emailAlerts : defaults.emailAlerts,
+    }
+  } catch {
+    return defaults
+  }
+}
+
 export default function Settings() {
   const { user } = useAuth()
   const isViewer = (user?.role ?? 'viewer') === 'viewer'
+  const [storedPreferences] = useState<StoredPreferences>(() => readStoredPreferences())
   
   // Mock states for settings
   const [activeSection, setActiveSection] = useState<SettingsSection>('account')
-  const [theme, setTheme] = useState('system')
-  const [mapDefault, setMapDefault] = useState('3d')
-  const [timeFormat, setTimeFormat] = useState<TimeFormat>('utc')
-  const [soundEnabled, setSoundEnabled] = useState(true)
-  const [emailAlerts, setEmailAlerts] = useState(true)
+  const [theme, setTheme] = useState(storedPreferences.theme)
+  const [mapDefault, setMapDefault] = useState(storedPreferences.mapDefault)
+  const [timeFormat, setTimeFormat] = useState<TimeFormat>(storedPreferences.timeFormat)
+  const [soundEnabled, setSoundEnabled] = useState(storedPreferences.soundEnabled)
+  const [emailAlerts, setEmailAlerts] = useState(storedPreferences.emailAlerts)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   
   // Mock API Keys
   const [apiKeys] = useState<{ id: number, name: string, created: string, lastUsed: string }[]>([
     { id: 1, name: 'Python Analytics Script', created: '2025-10-12', lastUsed: '2026-04-25' }
   ])
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(PREFERENCES_STORAGE_KEY)
-      if (!raw) return
-      const saved = JSON.parse(raw) as {
-        theme?: string
-        mapDefault?: string
-        timeFormat?: TimeFormat
-        soundEnabled?: boolean
-        emailAlerts?: boolean
-      }
-
-      if (saved.theme) setTheme(saved.theme)
-      if (saved.mapDefault) setMapDefault(saved.mapDefault)
-      if (saved.timeFormat === 'utc' || saved.timeFormat === 'local') setTimeFormat(saved.timeFormat)
-      if (typeof saved.soundEnabled === 'boolean') setSoundEnabled(saved.soundEnabled)
-      if (typeof saved.emailAlerts === 'boolean') setEmailAlerts(saved.emailAlerts)
-    } catch {
-      // Ignore malformed local storage values and keep defaults.
-    }
-  }, [])
 
   const handleSavePreferences = () => {
     const prefs = {

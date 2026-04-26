@@ -6,6 +6,17 @@ import { useState, useEffect, useRef } from 'react'
 type TimeFormat = 'utc' | 'local'
 const PREFERENCES_STORAGE_KEY = 'orbita-user-preferences'
 
+function readTimeFormat(): TimeFormat {
+  try {
+    const raw = localStorage.getItem(PREFERENCES_STORAGE_KEY)
+    if (!raw) return 'utc'
+    const parsed = JSON.parse(raw) as { timeFormat?: TimeFormat }
+    return parsed.timeFormat === 'local' ? 'local' : 'utc'
+  } catch {
+    return 'utc'
+  }
+}
+
 export default function Header() {
   const { user, logout } = useAuth()
   const role = user?.role ?? 'viewer'
@@ -16,24 +27,11 @@ export default function Header() {
   const isSuperAdmin = role === 'superadmin'
   const navigate = useNavigate()
   const [clockText, setClockText] = useState('')
-  const [timeFormat, setTimeFormat] = useState<TimeFormat>('utc')
+  const [timeFormat, setTimeFormat] = useState<TimeFormat>(() => readTimeFormat())
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const readTimeFormat = () => {
-      try {
-        const raw = localStorage.getItem(PREFERENCES_STORAGE_KEY)
-        if (!raw) return 'utc' as TimeFormat
-        const parsed = JSON.parse(raw) as { timeFormat?: TimeFormat }
-        return parsed.timeFormat === 'local' ? 'local' : 'utc'
-      } catch {
-        return 'utc' as TimeFormat
-      }
-    }
-
-    setTimeFormat(readTimeFormat())
-
     const handlePreferencesUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<{ timeFormat?: TimeFormat }>
       if (customEvent.detail?.timeFormat === 'local') {

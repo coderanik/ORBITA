@@ -220,7 +220,7 @@ export default function Admin() {
     }
   }, [section])
 
-  const currentFields = SECTION_FIELDS[section] ?? []
+  const currentFields = useMemo(() => SECTION_FIELDS[section] ?? [], [section])
 
   const getFieldType = useCallback((fieldName: string): FieldType => {
     return currentFields.find((f) => f.name === fieldName)?.type ?? 'text'
@@ -313,7 +313,7 @@ export default function Admin() {
     return collected
   }, [withPagination])
 
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     if (!tabConfig) return
     setLoading(true)
     setMessage(null)
@@ -327,11 +327,11 @@ export default function Admin() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [tabConfig, fetchAllItems, createBlankForm])
 
   useEffect(() => {
     void loadItems()
-  }, [section])
+  }, [loadItems])
 
   useEffect(() => {
     if (selected) {
@@ -756,12 +756,16 @@ export default function Admin() {
                     </div>
                     {issuedKey && <p className="text-xs text-emerald-300 break-all mb-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2">🔑 New key (copy now): {issuedKey}</p>}
                     <div className="space-y-1">
-                      {apiKeys.map((key) => (
-                        <div key={String(key.api_key_id)} className="text-xs border border-white/[0.06] rounded-xl p-2.5 flex justify-between items-center bg-black/20">
-                          <span className="text-slate-300">{String(key.key_name)} · <span className={Boolean(key.is_active) ? 'text-emerald-400' : 'text-red-400'}>{Boolean(key.is_active) ? 'active' : 'revoked'}</span></span>
-                          {Boolean(key.is_active) && <button className="text-red-400 hover:text-red-300 transition-colors text-[10px] font-medium" onClick={() => void revokeApiKey(Number(key.api_key_id))}>Revoke</button>}
-                        </div>
-                      ))}
+                      {apiKeys.map((key) => {
+                        const isActive = key.is_active === true
+
+                        return (
+                          <div key={String(key.api_key_id)} className="text-xs border border-white/[0.06] rounded-xl p-2.5 flex justify-between items-center bg-black/20">
+                            <span className="text-slate-300">{String(key.key_name)} · <span className={isActive ? 'text-emerald-400' : 'text-red-400'}>{isActive ? 'active' : 'revoked'}</span></span>
+                            {isActive && <button className="text-red-400 hover:text-red-300 transition-colors text-[10px] font-medium" onClick={() => void revokeApiKey(Number(key.api_key_id))}>Revoke</button>}
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
