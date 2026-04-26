@@ -1,9 +1,9 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { Viewer, Entity } from 'resium'
 import type { CesiumComponentRef } from 'resium'
 import { Cartesian3, Color, Ion, SceneMode, TileMapServiceImageryProvider, UrlTemplateImageryProvider, buildModuleUrl, Viewer as CesiumViewer, Entity as CesiumEntity, JulianDate, Math as CesiumMath } from 'cesium'
 import type { AnomalyAlert } from '../types'
-import { WifiOff } from 'lucide-react'
+import { Home, WifiOff } from 'lucide-react'
 
 // Only set the Ion token if one is provided; otherwise leave it unset
 // so that no requests are made to api.cesium.com
@@ -48,6 +48,7 @@ export default function GlobeView({
   const viewerRef = useRef<CesiumComponentRef<CesiumViewer>>(null);
   const rotationFrameRef = useRef<number | null>(null)
   const lastFrameTimeRef = useRef<number | null>(null)
+  const [geoError, setGeoError] = useState<string | null>(null)
 
   // Always initialize imagery explicitly so the globe renders even if Ion is unavailable.
   useEffect(() => {
@@ -183,6 +184,34 @@ export default function GlobeView({
     return points
   }
 
+  const focusCurrentLocation = () => {
+    const viewer = viewerRef.current?.cesiumElement
+    if (!viewer) return
+    setGeoError(null)
+
+    if (!navigator.geolocation) {
+      setGeoError('Location is not supported by this browser.')
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        viewer.camera.flyTo({
+          destination: Cartesian3.fromDegrees(coords.longitude, coords.latitude, 1_200_000),
+          duration: 1.2,
+        })
+      },
+      () => {
+        setGeoError('Unable to fetch your current location (permission blocked or unavailable).')
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10_000,
+        maximumAge: 60_000,
+      }
+    )
+  }
+
   return (
     <div className="h-full w-full bg-black relative">
       <Viewer
@@ -193,7 +222,7 @@ export default function GlobeView({
         baseLayerPicker={false}
         baseLayer={false}
         geocoder={false}
-        homeButton={true}
+        homeButton={false}
         sceneModePicker={true}
         infoBox={false}
         navigationHelpButton={false}
@@ -258,6 +287,21 @@ export default function GlobeView({
           )
         })}
       </Viewer>
+
+      <button
+        type="button"
+        onClick={focusCurrentLocation}
+        title="Go to my current location"
+        className="absolute top-3 right-[52px] w-10 h-10 rounded-md border border-white/[0.15] bg-slate-900/80 text-slate-200 hover:bg-slate-800 transition-colors z-20 flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+      >
+        <Home className="w-5 h-5" />
+      </button>
+
+      {geoError && (
+        <div className="absolute top-14 right-3 px-3 py-2 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-[10px] z-20 max-w-[280px]">
+          {geoError}
+        </div>
+      )}
 
       {/* Top-left overlay */}
       {!hideOverlays && <div className="absolute top-4 left-4 p-4 rounded-xl backdrop-blur-md bg-slate-950/70 border border-white/10 pointer-events-none space-y-2 min-w-[200px]">
