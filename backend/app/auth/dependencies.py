@@ -7,7 +7,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.security import hash_api_key, verify_password
+from app.auth.security import verify_password
 from app.core.database import get_db
 from app.models.auth_api_key import AuthApiKey
 from app.models.auth_user import AuthUser
