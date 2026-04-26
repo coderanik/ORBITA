@@ -1,5 +1,7 @@
 """Security utilities for hashing/verifying credentials."""
 
+import hashlib
+
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -14,4 +16,4 @@ def get_password_hash(password: str) -> str:
 
 
 def hash_api_key(raw_key: str) -> str:
-    return pwd_context.hash(raw_key)
+    return hashlib.sha256(raw_key.encode()).hexdigest()
