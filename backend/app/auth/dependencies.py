@@ -7,7 +7,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.security import hash_api_key
+from app.auth.security import verify_api_key
 from app.core.database import get_db
 from app.models.auth_api_key import AuthApiKey
 from app.models.auth_user import AuthUser
@@ -49,19 +49,18 @@ async def get_current_user(
             select(AuthApiKey, AuthUser)
             .join(AuthUser, AuthApiKey.user_id == AuthUser.user_id)
             .where(AuthApiKey.is_active.is_(True))
-            .where(AuthApiKey.key_hash == hash_api_key(x_api_key))
             .where(AuthUser.is_active.is_(True))
         )
-        row = result.one_or_none()
-        if row:
-            api_key, user = row
-            return {
-                "user_id": user.user_id,
-                "email": user.email,
-                "role": user.role,
-                "org_id": user.org_id,
-                "api_key_id": api_key.api_key_id,
-            }
+        rows = result.all()
+        for api_key, user in rows:
+            if verify_api_key(x_api_key, api_key.key_hash):
+                return {
+                    "user_id": user.user_id,
+                    "email": user.email,
+                    "role": user.role,
+                    "org_id": user.org_id,
+                    "api_key_id": api_key.api_key_id,
+                }
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API key",
