@@ -7,7 +7,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.security import hash_api_key
+from app.auth.security import hash_api_key, verify_password
 from app.core.database import get_db
 from app.models.auth_api_key import AuthApiKey
 from app.models.auth_user import AuthUser
@@ -45,29 +45,27 @@ async def get_current_user(
 
     # 2. Try API Key
     if x_api_key:
-        key_hash = hash_api_key(x_api_key)
         result = await db.execute(
             select(AuthApiKey, AuthUser)
             .join(AuthUser, AuthApiKey.user_id == AuthUser.user_id)
-            .where(AuthApiKey.key_hash == key_hash)
             .where(AuthApiKey.is_active.is_(True))
             .where(AuthUser.is_active.is_(True))
         )
-        row = result.one_or_none()
-        if not row:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid API key",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        api_key, user = row
-        return {
-            "user_id": user.user_id,
-            "email": user.email,
-            "role": user.role,
-            "org_id": user.org_id,
-            "api_key_id": api_key.api_key_id,
-        }
+        rows = result.all()
+        for api_key, user in rows:
+            if verify_password(x_api_key, api_key.key_hash):
+                return {
+                    "user_id": user.user_id,
+                    "email": user.email,
+                    "role": user.role,
+                    "org_id": user.org_id,
+                    "api_key_id": api_key.api_key_id,
+                }
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
