@@ -1,0 +1,49 @@
+frontend:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'frontend/**'
+
+backend:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'backend/**'
+
+infra:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'infra/**'
+      - 'docker/**'
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**'
+
+docs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'README.md'
+      - '**/*.md'
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'backend/tests/**'
+      - 'frontend/e2e/**'
+      - 'frontend/src/test/**'
+
+database:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'backend/alembic/**'
+      - 'backend/db-sql/**'
+      - 'infra/k8s/postgres/**'
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+      - 'frontend/pnpm-lock.yaml'
+      - 'frontend/yarn.lock'
+      - 'backend/requirements.txt'
