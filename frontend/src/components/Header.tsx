@@ -137,7 +137,7 @@ export default function Header() {
             </>
           ) : isAdmin ? (
             <>
-              <NavLink to="/" className={navLinkClass}>
+              <NavLink to="/dashboard" className={navLinkClass}>
                 <Radar className="w-4 h-4" /> Dashboard
               </NavLink>
               <NavLink to="/admin" className={navLinkClass}>
@@ -146,7 +146,7 @@ export default function Header() {
             </>
           ) : (
             <>
-              <NavLink to="/" className={navLinkClass}>
+              <NavLink to="/dashboard" className={navLinkClass}>
                 <Radar className="w-4 h-4" /> Dashboard
               </NavLink>
               {canAccessRegistry && (
