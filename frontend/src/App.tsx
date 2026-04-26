@@ -8,6 +8,7 @@ import KesslerSimulator from './pages/KesslerSimulator'
 import AIInvestigation from './pages/AIInvestigation'
 import Admin from './pages/Admin'
 import SystemOps from './pages/SystemOps'
+import Settings from './pages/Settings'
 import { AuthProvider } from './contexts/AuthContext'
 import { useAuth } from './contexts/useAuth'
 
@@ -76,6 +77,7 @@ function App() {
           <Route path="/admin/tle" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
           <Route path="/admin/atsad" element={<ProtectedRoute allowedRoles={['admin', 'superadmin']}><Admin /></ProtectedRoute>} />
           <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']}><SystemOps /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute allowedRoles={['viewer', 'operator', 'admin', 'superadmin']}><Settings /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

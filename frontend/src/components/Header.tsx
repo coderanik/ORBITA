@@ -1,29 +1,87 @@
-import { Activity, Database, Radar, LogOut, Trophy, Clock, Bomb, BrainCircuit, Shield } from 'lucide-react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Database, Radar, LogOut, Trophy, Clock, Bomb, BrainCircuit, Shield, Settings, ChevronDown } from 'lucide-react'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/useAuth'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+
+type TimeFormat = 'utc' | 'local'
+const PREFERENCES_STORAGE_KEY = 'orbita-user-preferences'
 
 export default function Header() {
   const { user, logout } = useAuth()
   const role = user?.role ?? 'viewer'
+  const isAdmin = role === 'admin'
   const canAccessOps = role === 'operator' || role === 'admin' || role === 'superadmin'
   const canAccessRegistry = role === 'admin' || role === 'superadmin'
   const canAccessAdmin = role === 'admin' || role === 'superadmin'
   const isSuperAdmin = role === 'superadmin'
-  const location = useLocation()
-  const inSuperAdminView = isSuperAdmin && location.pathname.startsWith('/superadmin')
   const navigate = useNavigate()
-  const [utcTime, setUtcTime] = useState('')
+  const [clockText, setClockText] = useState('')
+  const [timeFormat, setTimeFormat] = useState<TimeFormat>('utc')
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const readTimeFormat = () => {
+      try {
+        const raw = localStorage.getItem(PREFERENCES_STORAGE_KEY)
+        if (!raw) return 'utc' as TimeFormat
+        const parsed = JSON.parse(raw) as { timeFormat?: TimeFormat }
+        return parsed.timeFormat === 'local' ? 'local' : 'utc'
+      } catch {
+        return 'utc' as TimeFormat
+      }
+    }
+
+    setTimeFormat(readTimeFormat())
+
+    const handlePreferencesUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ timeFormat?: TimeFormat }>
+      if (customEvent.detail?.timeFormat === 'local') {
+        setTimeFormat('local')
+      } else if (customEvent.detail?.timeFormat === 'utc') {
+        setTimeFormat('utc')
+      } else {
+        setTimeFormat(readTimeFormat())
+      }
+    }
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === PREFERENCES_STORAGE_KEY) {
+        setTimeFormat(readTimeFormat())
+      }
+    }
+
+    window.addEventListener('orbita:preferences-updated', handlePreferencesUpdated as EventListener)
+    window.addEventListener('storage', handleStorage)
+    return () => {
+      window.removeEventListener('orbita:preferences-updated', handlePreferencesUpdated as EventListener)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => {
     const tick = () => {
       const now = new Date()
-      setUtcTime(now.toUTCString().split(' ').slice(4, 5)[0] + ' UTC')
+      if (timeFormat === 'local') {
+        setClockText(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' LOCAL')
+      } else {
+        setClockText(now.toUTCString().split(' ').slice(4, 5)[0] + ' UTC')
+      }
     }
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [timeFormat])
 
   const handleLogout = () => {
     logout()
@@ -54,8 +112,8 @@ export default function Header() {
       <div className="flex items-center gap-4 min-w-0 flex-1">
         {/* Logo */}
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-[0_0_12px_rgba(59,130,246,0.5)]">
-            <Activity className="w-4.5 h-4.5 text-white w-[18px] h-[18px]" />
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-black/40 border border-white/5 shadow-[0_0_15px_rgba(59,130,246,0.3)] overflow-hidden">
+            <img src="/logo.png" alt="ORBITA Logo" className="w-full h-full object-cover scale-110" />
           </div>
           <div className="hidden lg:block">
             <h1 className="text-sm font-bold tracking-widest text-white leading-none">
@@ -67,7 +125,7 @@ export default function Header() {
 
         {/* Nav */}
         <nav className="flex items-center gap-1 min-w-0 overflow-x-auto no-scrollbar pr-2">
-          {inSuperAdminView ? (
+          {isSuperAdmin ? (
             <>
               <NavLink to="/superadmin" className={navLinkClass}>
                 <Shield className="w-4 h-4" /> Super Admin
@@ -77,6 +135,15 @@ export default function Header() {
                 <span className="ml-1 text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded border border-cyan-500/25 bg-cyan-500/10 text-cyan-300">
                   Read-only
                 </span>
+              </NavLink>
+            </>
+          ) : isAdmin ? (
+            <>
+              <NavLink to="/" className={navLinkClass}>
+                <Radar className="w-4 h-4" /> Dashboard
+              </NavLink>
+              <NavLink to="/admin" className={navLinkClass}>
+                <Shield className="w-4 h-4" /> Admin
               </NavLink>
             </>
           ) : (
@@ -107,21 +174,16 @@ export default function Header() {
                   <Shield className="w-4 h-4" /> Admin
                 </NavLink>
               )}
-              {isSuperAdmin && (
-                <NavLink to="/superadmin" className={navLinkClass}>
-                  <Shield className="w-4 h-4" /> Super Admin
-                </NavLink>
-              )}
             </>
           )}
         </nav>
       </div>
 
       <div className="flex items-center gap-2 shrink-0 pl-2">
-        {/* UTC Clock */}
+        {/* User clock (UTC/Local by preference) */}
         <div className="hidden md:flex items-center gap-1.5 text-xs font-mono text-slate-400 bg-slate-900/60 px-2.5 py-1.5 rounded-lg border border-white/5 whitespace-nowrap">
           <Clock className="w-3 h-3 text-slate-500" />
-          {utcTime}
+          {clockText}
         </div>
 
         {/* System status */}
@@ -132,23 +194,40 @@ export default function Header() {
 
         {/* User */}
         {user && (
-          <div className="flex items-center gap-2 pl-2 border-l border-white/10">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500/30 to-cyan-500/30 border border-white/10 flex items-center justify-center text-xs font-bold text-blue-300">
-              {user.username?.[0]?.toUpperCase() ?? 'A'}
-            </div>
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="text-slate-300 text-sm font-medium">{user.username}</span>
-              <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full border ${roleBadgeClass}`}>
-                {role}
-              </span>
-            </div>
+          <div className="relative flex items-center pl-2 border-l border-white/10" ref={menuRef}>
             <button
-              onClick={handleLogout}
-              className="text-slate-500 hover:text-red-400 transition-colors p-1 rounded hover:bg-red-500/10"
-              title="Logout"
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${roleBadgeClass} hover:opacity-80`}
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <span className="text-xs uppercase tracking-widest font-bold">{role}</span>
+              <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
             </button>
+
+            {userMenuOpen && (
+              <div className="absolute right-0 top-full mt-3 w-48 rounded-xl bg-slate-900 border border-white/[0.08] shadow-2xl py-1 z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="px-3 py-2 border-b border-white/[0.05] mb-1">
+                  <p className="text-xs font-semibold text-slate-200 truncate">{user.username}</p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">{role}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setUserMenuOpen(false)
+                    navigate('/settings') // Assuming a settings route exists, or just a placeholder
+                  }}
+                  className="w-full text-left flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-white/[0.05] transition-colors"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  Settings
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Log out
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
