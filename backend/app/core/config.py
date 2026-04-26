@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     SPACETRACK_USERNAME: str = ""
     SPACETRACK_PASSWORD: str = ""
     SPACETRACK_BASE_URL: str = "https://www.space-track.org"
+    GOOGLE_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai"
 
     # ── CORS ──────────────────────────────────────────────────
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:8085"]

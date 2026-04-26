@@ -41,7 +41,7 @@ def get_llm(provider: str = "gemini", temperature: float = 0.0):
         )
     if normalized == "gemini":
         return ChatOpenAI(
-            model=os.getenv("GEMINI_MODEL", "gemini-1.5-pro"),
+            model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
             temperature=temperature,
             api_key=os.getenv("GOOGLE_API_KEY"),
             base_url=os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai")
@@ -49,7 +49,7 @@ def get_llm(provider: str = "gemini", temperature: float = 0.0):
 
     # Safe default for unsupported provider values.
     return ChatOpenAI(
-        model=os.getenv("GEMINI_MODEL", "gemini-1.5-pro"),
+        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
         temperature=temperature,
         api_key=os.getenv("GOOGLE_API_KEY"),
         base_url=os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai")
