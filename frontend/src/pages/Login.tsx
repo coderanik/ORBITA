@@ -7,7 +7,7 @@ import { API_BASE_URL } from '../api/orbita';
 function landingPathForRole(role?: string) {
   if (role === 'admin') return '/admin';
   if (role === 'superadmin') return '/superadmin';
-  return '/';
+  return '/dashboard';
 }
 
 export default function Login() {
