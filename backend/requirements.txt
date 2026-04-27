@@ -50,7 +50,7 @@ nltk==3.9.4
 # ── Utilities ─────────────────────────────────────────────────
 python-dateutil==2.9.0
 orjson==3.11.6
-ujson==5.11.0
+ujson==5.12.0
 filelock==3.29.0
 werkzeug==3.1.6
 pillow==12.1.1
