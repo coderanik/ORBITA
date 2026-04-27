@@ -131,7 +131,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Validate Docker Compose
-        run: docker compose config -q
+        run: |
+          touch backend/.env
+          docker compose config -q
 
       - name: Validate K8s Manifests
         run: |
