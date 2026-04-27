@@ -5,6 +5,8 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.auth.dependencies import get_current_user
+from app.auth.scoping import enforce_org_scope
 from app.models.space_object import SpaceObject
 from app.schemas.space_object import (
     SpaceObjectCreate,
@@ -26,10 +28,11 @@ async def list_space_objects(
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """List and filter space objects in the catalog."""
-    query = select(SpaceObject)
-    count_query = select(func.count()).select_from(SpaceObject)
+    query = enforce_org_scope(select(SpaceObject), SpaceObject, current_user)
+    count_query = enforce_org_scope(select(func.count()).select_from(SpaceObject), SpaceObject, current_user)
 
     if object_type:
         query = query.where(SpaceObject.object_type == object_type.upper())
@@ -57,11 +60,14 @@ async def list_space_objects(
 
 
 @router.get("/{object_id}", response_model=SpaceObjectRead)
-async def get_space_object(object_id: int, db: AsyncSession = Depends(get_db)):
+async def get_space_object(
+    object_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     """Get a single space object by ID."""
-    result = await db.execute(
-        select(SpaceObject).where(SpaceObject.object_id == object_id)
-    )
+    query = enforce_org_scope(select(SpaceObject), SpaceObject, current_user).where(SpaceObject.object_id == object_id)
+    result = await db.execute(query)
     obj = result.scalar_one_or_none()
     if not obj:
         raise HTTPException(status_code=404, detail="Space object not found")
@@ -69,11 +75,14 @@ async def get_space_object(object_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/norad/{norad_id}", response_model=SpaceObjectRead)
-async def get_by_norad(norad_id: int, db: AsyncSession = Depends(get_db)):
+async def get_by_norad(
+    norad_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     """Get a space object by its NORAD catalog ID."""
-    result = await db.execute(
-        select(SpaceObject).where(SpaceObject.norad_id == norad_id)
-    )
+    query = enforce_org_scope(select(SpaceObject), SpaceObject, current_user).where(SpaceObject.norad_id == norad_id)
+    result = await db.execute(query)
     obj = result.scalar_one_or_none()
     if not obj:
         raise HTTPException(status_code=404, detail=f"No object with NORAD ID {norad_id}")
@@ -84,9 +93,15 @@ async def get_by_norad(norad_id: int, db: AsyncSession = Depends(get_db)):
 async def create_space_object(
     payload: SpaceObjectCreate,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """Register a new space object in the catalog."""
-    obj = SpaceObject(**payload.model_dump(exclude_unset=True))
+    obj = SpaceObject(
+        **payload.model_dump(exclude_unset=True),
+        org_id=current_user.get("org_id"),
+        created_by=current_user.get("user_id"),
+        updated_by=current_user.get("user_id"),
+    )
     db.add(obj)
     await db.flush()
     await db.refresh(obj)
@@ -98,11 +113,11 @@ async def update_space_object(
     object_id: int,
     payload: SpaceObjectUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """Update fields on an existing space object."""
-    result = await db.execute(
-        select(SpaceObject).where(SpaceObject.object_id == object_id)
-    )
+    query = enforce_org_scope(select(SpaceObject), SpaceObject, current_user).where(SpaceObject.object_id == object_id)
+    result = await db.execute(query)
     obj = result.scalar_one_or_none()
     if not obj:
         raise HTTPException(status_code=404, detail="Space object not found")
@@ -110,6 +125,7 @@ async def update_space_object(
     update_data = payload.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(obj, field, value)
+    obj.updated_by = current_user.get("user_id")
 
     await db.flush()
     await db.refresh(obj)
@@ -117,12 +133,17 @@ async def update_space_object(
 
 
 @router.delete("/{object_id}", status_code=204)
-async def delete_space_object(object_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_space_object(
+    object_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     """Remove a space object and all related data (cascade)."""
-    result = await db.execute(
-        select(SpaceObject).where(SpaceObject.object_id == object_id)
-    )
+    query = enforce_org_scope(select(SpaceObject), SpaceObject, current_user).where(SpaceObject.object_id == object_id)
+    result = await db.execute(query)
     obj = result.scalar_one_or_none()
     if not obj:
         raise HTTPException(status_code=404, detail="Space object not found")
-    await db.delete(obj)
+    obj.is_deleted = True
+    obj.deleted_at = func.now()
+    obj.updated_by = current_user.get("user_id")

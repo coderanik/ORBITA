@@ -1,0 +1,87 @@
+services:
+  # Main FastAPI Backend Service
+  - type: web
+    name: orbita-api
+    env: docker
+    dockerContext: backend
+    dockerfilePath: backend/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: orbita-db
+          property: connectionString
+      - key: DATABASE_URL_SYNC
+        fromDatabase:
+          name: orbita-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: orbita-redis
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+      - key: GOOGLE_API_KEY
+        sync: false
+
+  # Celery Background Worker
+  - type: worker
+    name: orbita-worker
+    env: docker
+    dockerContext: backend
+    dockerfilePath: backend/Dockerfile
+    dockerCommand: "celery -A app.workers.celery_app worker --loglevel=info -c 4"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: orbita-db
+          property: connectionString
+      - key: DATABASE_URL_SYNC
+        fromDatabase:
+          name: orbita-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: orbita-redis
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+
+  # Celery Beat Scheduler
+  - type: worker
+    name: orbita-beat
+    env: docker
+    dockerContext: backend
+    dockerfilePath: backend/Dockerfile
+    dockerCommand: "celery -A app.workers.celery_app beat --loglevel=info"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: orbita-db
+          property: connectionString
+      - key: DATABASE_URL_SYNC
+        fromDatabase:
+          name: orbita-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: orbita-redis
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+
+databases:
+  # PostgreSQL with PostGIS
+  - name: orbita-db
+    databaseName: orbita_registry
+    user: orbita_admin
+    plan: starter # Change to higher tier if required
+    ipAllowList: [] # Allows all by default, restrict in production
+
+  # Redis instance for Celery Broker/Backend
+  - name: orbita-redis
+    type: redis
+    plan: starter # Change to higher tier if required
+    ipAllowList: []

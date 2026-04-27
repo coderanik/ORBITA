@@ -4,6 +4,12 @@ import { useAuth } from '../contexts/useAuth';
 import { Shield, Orbit, LogIn, Lock, User as UserIcon, Activity } from 'lucide-react';
 import { API_BASE_URL } from '../api/orbita';
 
+function landingPathForRole(role?: string) {
+  if (role === 'admin') return '/admin';
+  if (role === 'superadmin') return '/superadmin';
+  return '/dashboard';
+}
+
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -24,7 +30,11 @@ export default function Login() {
 
       const res = await fetch(`${API_BASE_URL}/auth/token`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Client-Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+          'X-Client-TZ-Offset-Minutes': String(-new Date().getTimezoneOffset()),
+        },
         body: data,
       });
 
@@ -41,7 +51,7 @@ export default function Login() {
 
       const userData = await userRes.json();
       login(token, userData);
-      navigate('/');
+      navigate(landingPathForRole(userData?.role));
     } catch (err: unknown) {
       const error = err as Error
       setError(error?.message || 'Authentication failed')

@@ -135,9 +135,33 @@ docker compose up -d
 | **API Docs (ReDoc)** | http://localhost:8000/redoc |
 | **pgAdmin** | http://localhost:8080 |
 | **Health Check** | http://localhost:8000/health |
+| **Admin CRUD UI** | http://localhost:5173/admin |
 
 pgAdmin credentials: `admin@orbita.dev` / `admin123`
 Add server: host=`orbita-db`, port=`5432`, db=`orbita_registry`, user=`orbita_admin`
+
+### 2.1 Database Migrations (Alembic)
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+Alembic migrations now live in `backend/alembic/`, with a baseline revision for existing SQL-managed schema and incremental revisions for new changes.
+
+Seed behavior:
+- `0003_org_scoping_audit_and_seeds` creates default org membership metadata and starter ATSAD dataset/model entries for local development.
+
+Admin UI sections:
+- `/admin/catalog/space-objects`
+- `/admin/catalog/operators`
+- `/admin/catalog/missions`
+- `/admin/catalog/ground-stations`
+- `/admin/catalog/launch-vehicles`
+- `/admin/users`
+- `/admin/events/conjunctions`
+- `/admin/tle`
+- `/admin/atsad?tab=datasets|models|runs`
 
 ### 3. API Endpoints
 

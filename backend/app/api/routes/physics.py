@@ -2,21 +2,24 @@
 API routes for High-Fidelity Physics Engine (Phase 1).
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 import numpy as np
 from astropy.time import Time
+from sqlalchemy import desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.physics import (
     HiFiPropagateRequest, HiFiPropagateResponse, ProbabilityRequest, 
     CAMRequest, OrbitDeterminationRequest, CollisionScreenRequest
 )
 
+from app.core.database import get_db
+from app.models.orbit_state import OrbitState
 from app.physics.propagator import NumericalPropagator
 from app.physics.collision.probability import compute_collision_probability
 from app.physics.collision.cam_optimizer import CAMOptimizer
 from app.physics.orbit_determination import OrbitDetermination
-# In real application, we'd inject DB session to store/read data
-# from app.core.database import get_db
+from app.physics.collision.screening import screen_catalog as screen_catalog_pairs
 
 router = APIRouter(tags=["High-Fidelity Physics"])
 
@@ -111,9 +114,51 @@ async def determine_orbit(req: OrbitDeterminationRequest):
     }
 
 @router.post("/collision/screen")
-async def screen_catalog(req: CollisionScreenRequest):
-    """
-    (Placeholder) Screen catalog for conjunctions using KD-Tree.
-    In a real call, we'd query all object states from DB.
-    """
-    return {"status": "Screening queued", "threshold_km": req.threshold_km}
+async def screen_catalog(req: CollisionScreenRequest, db: AsyncSession = Depends(get_db)):
+    """Screen the latest catalog state vectors for close approaches using KD-Tree."""
+    latest_state_subq = (
+        select(
+            OrbitState.object_id,
+            OrbitState.epoch,
+            OrbitState.position_x_km,
+            OrbitState.position_y_km,
+            OrbitState.position_z_km,
+            func.row_number()
+            .over(partition_by=OrbitState.object_id, order_by=desc(OrbitState.epoch))
+            .label("rn"),
+        )
+        .where(OrbitState.position_x_km.is_not(None))
+        .where(OrbitState.position_y_km.is_not(None))
+        .where(OrbitState.position_z_km.is_not(None))
+        .subquery()
+    )
+
+    rows = (
+        await db.execute(select(latest_state_subq).where(latest_state_subq.c.rn == 1))
+    ).all()
+    if len(rows) < 2:
+        return {"status": "ok", "threshold_km": req.threshold_km, "candidates": []}
+
+    ids = np.array([int(r.object_id) for r in rows], dtype=np.int64)
+    positions = np.array(
+        [[r.position_x_km, r.position_y_km, r.position_z_km] for r in rows], dtype=np.float64
+    )
+    epoch_map = {int(r.object_id): r.epoch for r in rows}
+
+    candidates = screen_catalog_pairs(positions=positions, ids=ids, threshold_km=req.threshold_km)
+    return {
+        "status": "ok",
+        "threshold_km": req.threshold_km,
+        "screened_object_count": len(rows),
+        "candidate_count": len(candidates),
+        "candidates": [
+            {
+                "primary_object_id": int(primary_id),
+                "secondary_object_id": int(secondary_id),
+                "miss_distance_km": float(distance_km),
+                "primary_epoch": epoch_map[int(primary_id)].isoformat() if epoch_map.get(int(primary_id)) else None,
+                "secondary_epoch": epoch_map[int(secondary_id)].isoformat() if epoch_map.get(int(secondary_id)) else None,
+            }
+            for primary_id, secondary_id, distance_km in candidates[:500]
+        ],
+    }

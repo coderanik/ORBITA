@@ -17,7 +17,8 @@ celery_app = Celery(
         "app.workers.tasks.tle_updater",
         "app.workers.tasks.space_weather",
         "app.workers.tasks.conjunction_scan",
-        "app.workers.tasks.telemetry_ingest"
+        "app.workers.tasks.telemetry_ingest",
+        "app.workers.tasks.kessler_sim",
     ]
 )
 

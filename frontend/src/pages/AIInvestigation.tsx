@@ -2,12 +2,15 @@ import { useState } from 'react'
 import Header from '../components/Header'
 import { API_BASE_URL } from '../api/orbita'
 import { useAuth } from '../contexts/useAuth'
-import { BrainCircuit, Send, Loader2, FileText, AlertTriangle } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import { BrainCircuit, Send, Loader2, FileText, AlertTriangle, ArrowDown } from 'lucide-react'
 
 export default function AIInvestigation() {
   const { token } = useAuth()
-  const [alertId, setAlertId] = useState(1)
-  const [provider, setProvider] = useState('openai')
+  const [searchParams] = useSearchParams()
+  const initialAlertId = Number(searchParams.get('alertId')) || 1
+  const [alertId, setAlertId] = useState(initialAlertId)
+  const [provider, setProvider] = useState('gemini')
   const [isRunning, setIsRunning] = useState(false)
   const [report, setReport] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -27,8 +30,30 @@ export default function AIInvestigation() {
     finally { setIsRunning(false) }
   }
 
+  const downloadReport = () => {
+    if (!report) return
+    const plainReport = report
+      .replace(/^#{1,6}\s*/gm, '')
+      .replace(/^\s*[-*]\s+/gm, '- ')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/\r\n/g, '\n')
+      .trim()
+
+    const blob = new Blob([plainReport], { type: 'text/plain;charset=utf-8' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `incident_report_alert_${alertId}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  }
+
   return (
-    <div className="h-screen w-full flex flex-col bg-[#04060b] text-slate-200 overflow-hidden font-['Inter']">
+    <div className="h-screen w-full flex flex-col bg-[#04060b] text-slate-200 overflow-hidden font-['Inter'] pt-[4.5rem]">
       <Header />
       <div className="flex-1 overflow-auto">
         {/* Hero */}
@@ -60,8 +85,9 @@ export default function AIInvestigation() {
               <label className="text-xs text-slate-400 mb-1 block">LLM Provider</label>
               <select value={provider} onChange={e => setProvider(e.target.value)}
                 className="w-full bg-slate-900/50 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50">
-                <option value="openai">OpenAI (GPT-4o)</option>
-                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="gemini">Google Gemini (1.5 Pro)</option>
+                <option value="deepseek">DeepSeek (deepseek-chat)</option>
+                <option value="huggingface">Hugging Face (HF Router)</option>
               </select>
             </div>
             <button onClick={runInvestigation} disabled={isRunning}
@@ -86,6 +112,15 @@ export default function AIInvestigation() {
           <div className="lg:col-span-2 bg-[#0a1428]/70 rounded-2xl border border-white/8 p-6">
             <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
               <FileText className="w-5 h-5 text-emerald-400" /> Incident Report
+              {report && (
+                <button
+                  onClick={downloadReport}
+                  title="Download report"
+                  className="ml-auto w-7 h-7 rounded-md border border-white/10 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
+                >
+                  <ArrowDown className="w-3.5 h-3.5" />
+                </button>
+              )}
             </h2>
             {!report && !isRunning && (
               <div className="flex flex-col items-center justify-center py-20 text-slate-500">

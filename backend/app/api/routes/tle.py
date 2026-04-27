@@ -3,6 +3,10 @@ from skyfield.api import load
 import math
 from app.core.config import get_settings
 import os
+from pydantic import BaseModel, Field
+from fastapi import Depends, HTTPException
+
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(tags=["TLE"])
 settings = get_settings()
@@ -20,6 +24,12 @@ except Exception as e:
     SATELLITES = []
 
 ts = load.timescale()
+
+
+class ManualTLEIngest(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    line1: str = Field(min_length=69, max_length=69)
+    line2: str = Field(min_length=69, max_length=69)
 
 @router.get("/real-positions")
 def get_real_positions():
@@ -49,3 +59,16 @@ def get_real_positions():
             continue
     
     return positions
+
+
+@router.post("/tle/manual")
+def ingest_manual_tle(payload: ManualTLEIngest, _: dict = Depends(get_current_user)):
+    """Manually ingest a TLE triple for objects not available in CelesTrak."""
+    if not payload.line1.startswith("1 ") or not payload.line2.startswith("2 "):
+        raise HTTPException(status_code=400, detail="Invalid TLE format")
+    manual_path = os.path.join(BASE_DIR, "tle_data", "manual_ingest.txt")
+    with open(manual_path, "a", encoding="utf-8") as f:
+        f.write(f"{payload.name.strip()}\n")
+        f.write(f"{payload.line1.strip()}\n")
+        f.write(f"{payload.line2.strip()}\n")
+    return {"status": "ingested", "path": "tle_data/manual_ingest.txt"}

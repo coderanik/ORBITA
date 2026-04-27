@@ -12,6 +12,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
+from app.core.database import async_session
+from app.auth.bootstrap import ensure_default_admin
 from app.api.routes import (
     space_objects,
     orbits,
@@ -46,6 +48,7 @@ from app.api.routes import (
     websockets,
     agents,
     kessler,
+    system_ops,
 )
 
 settings = get_settings()
@@ -57,6 +60,8 @@ async def lifespan(app: FastAPI):
     # ── startup ──
     print(f"  ORBITA-ATSAD v{settings.APP_VERSION} starting ({settings.ENVIRONMENT})")
     print(f"  Database: {settings.DATABASE_URL[:50]}...")
+    async with async_session() as session:
+        await ensure_default_admin(session)
     yield
     # ── shutdown ──
     print("  ORBITA-ATSAD shutting down")
@@ -130,6 +135,9 @@ app.include_router(agents.router,            prefix=API_V1)
 
 # Kessler Syndrome Simulator
 app.include_router(kessler.router,           prefix=API_V1)
+
+# System operations
+app.include_router(system_ops.router,        prefix=API_V1)
 
 # TLE Positions
 app.include_router(tle.router,               prefix=API_V1)
