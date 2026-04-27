@@ -1,6 +1,5 @@
 """Security utilities for hashing/verifying credentials."""
 
-import hashlib
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -15,9 +14,8 @@ def get_password_hash(password: str) -> str:
 
 
 def hash_api_key(raw_key: str) -> str:
-    return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+    return pwd_context.hash(raw_key)
 
 
 def verify_api_key(raw_key: str, stored_hash: str) -> bool:
-    import hmac
-    return hmac.compare_digest(hash_api_key(raw_key), stored_hash)
+    return pwd_context.verify(raw_key, stored_hash)
