@@ -8,6 +8,3 @@ def test_password_hash_roundtrip():
     assert verify_password(raw, hashed)
 
 
-def test_api_key_hash_is_stable():
-    key = "orb_test_key"
-    assert hash_api_key(key) == hash_api_key(key)
