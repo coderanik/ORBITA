@@ -1,4 +1,4 @@
-from app.auth.security import get_password_hash, hash_api_key, verify_password
+from app.auth.security import get_password_hash, verify_password
 
 
 def test_password_hash_roundtrip():
