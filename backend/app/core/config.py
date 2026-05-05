@@ -1,6 +1,7 @@
 """Application configuration loaded from environment variables."""
 
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 from functools import lru_cache
 
 
@@ -38,6 +39,28 @@ class Settings(BaseSettings):
 
     # ── CORS ──────────────────────────────────────────────────
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:8085"]
+
+    @model_validator(mode="after")
+    def normalise_database_urls(self) -> "Settings":
+        """Ensure DATABASE_URL uses the asyncpg driver and DATABASE_URL_SYNC
+        uses psycopg2, regardless of how the env var was originally provided.
+        Render (and most PaaS) inject plain ``postgresql://`` URLs."""
+        url = self.DATABASE_URL
+        # Convert plain postgresql:// → postgresql+asyncpg://
+        if url.startswith("postgresql://"):
+            self.DATABASE_URL = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgres://"):
+            self.DATABASE_URL = url.replace("postgres://", "postgresql+asyncpg://", 1)
+
+        # Derive sync URL from the (now-normalised) async URL
+        sync = self.DATABASE_URL_SYNC
+        if sync.startswith("postgresql://") or sync.startswith("postgres://"):
+            self.DATABASE_URL_SYNC = sync.replace(
+                "postgres://", "postgresql+psycopg2://", 1
+            ).replace(
+                "postgresql://", "postgresql+psycopg2://", 1
+            )
+        return self
 
     class Config:
         env_file = ".env"
