@@ -38,21 +38,28 @@ class Settings(BaseSettings):
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai"
 
     # ── CORS ──────────────────────────────────────────────────
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:8085"]
+    # Accepts a comma-separated string from env, e.g.:
+    # CORS_ORIGINS=https://orbiita.vercel.app,https://orbita-64lu.onrender.com
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:8085"
 
     @model_validator(mode="after")
-    def normalise_database_urls(self) -> "Settings":
-        """Ensure DATABASE_URL uses the asyncpg driver and DATABASE_URL_SYNC
-        uses psycopg2, regardless of how the env var was originally provided.
-        Render (and most PaaS) inject plain ``postgresql://`` URLs."""
+    def normalise_settings(self) -> "Settings":
+        """Post-process settings after loading from environment."""
+        # ── CORS: split comma-separated string into a list ────
+        if isinstance(self.CORS_ORIGINS, str):
+            self._cors_origins_list = [
+                origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()
+            ]
+        else:
+            self._cors_origins_list = list(self.CORS_ORIGINS)
+
+        # ── Database URL normalisation ────────────────────────
         url = self.DATABASE_URL
-        # Convert plain postgresql:// → postgresql+asyncpg://
         if url.startswith("postgresql://"):
             self.DATABASE_URL = url.replace("postgresql://", "postgresql+asyncpg://", 1)
         elif url.startswith("postgres://"):
             self.DATABASE_URL = url.replace("postgres://", "postgresql+asyncpg://", 1)
 
-        # Derive sync URL from the (now-normalised) async URL
         sync = self.DATABASE_URL_SYNC
         if sync.startswith("postgresql://") or sync.startswith("postgres://"):
             self.DATABASE_URL_SYNC = sync.replace(
@@ -61,6 +68,11 @@ class Settings(BaseSettings):
                 "postgresql://", "postgresql+psycopg2://", 1
             )
         return self
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Parsed list of CORS origin URLs."""
+        return getattr(self, "_cors_origins_list", self.CORS_ORIGINS.split(","))
 
     class Config:
         env_file = ".env"
