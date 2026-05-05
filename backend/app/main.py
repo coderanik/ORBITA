@@ -60,6 +60,21 @@ async def lifespan(app: FastAPI):
     # ── startup ──
     print(f"  ORBITA-ATSAD v{settings.APP_VERSION} starting ({settings.ENVIRONMENT})")
     print(f"  Database: {settings.DATABASE_URL[:50]}...")
+
+    # Ensure all PostgreSQL schemas and tables exist (safe for fresh databases)
+    from app.core.database import get_async_engine, Base
+    import app.models  # noqa: F401 — register all models with Base.metadata
+    from sqlalchemy import text
+
+    engine = get_async_engine()
+    async with engine.begin() as conn:
+        # Create schemas first (CREATE SCHEMA IF NOT EXISTS is idempotent)
+        for schema in ("auth", "catalog", "tracking", "telemetry", "analytics", "ml"):
+            await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+        # Create all tables from SQLAlchemy models (checkfirst=True by default)
+        await conn.run_sync(Base.metadata.create_all)
+        print("  Database schemas and tables verified/created")
+
     async with async_session() as session:
         await ensure_default_admin(session)
     yield
