@@ -75,8 +75,14 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         print("  Database schemas and tables verified/created")
 
-    async with async_session() as session:
-        await ensure_default_admin(session)
+    try:
+        async with async_session() as session:
+            await ensure_default_admin(session)
+        print("  Default admin bootstrap completed successfully")
+    except Exception as exc:
+        print(f"  [WARNING] Bootstrap failed: {exc}")
+        import traceback
+        traceback.print_exc()
     yield
     # ── shutdown ──
     print("  ORBITA-ATSAD shutting down")
