@@ -6,28 +6,28 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # All seed SQL statements (PostGIS-free, idempotent with ON CONFLICT)
 SEED_STATEMENTS = [
     # ── Operators ──
-    """INSERT INTO catalog.operator (name, short_name, country_code, operator_type, website, founded_year, headquarters) VALUES
-    ('National Aeronautics and Space Administration','NASA','USA','GOVERNMENT','https://nasa.gov',1958,'Washington, D.C.'),
-    ('SpaceX','SpaceX','USA','COMMERCIAL','https://spacex.com',2002,'Hawthorne, CA'),
-    ('European Space Agency','ESA','EUR','INTERGOVERNMENTAL','https://esa.int',1975,'Paris, France'),
-    ('Indian Space Research Organisation','ISRO','IND','GOVERNMENT','https://isro.gov.in',1969,'Bangalore, India'),
-    ('Roscosmos','Roscosmos','RUS','GOVERNMENT','https://roscosmos.ru',1992,'Moscow, Russia'),
-    ('Japan Aerospace Exploration Agency','JAXA','JPN','GOVERNMENT','https://jaxa.jp',2003,'Tokyo, Japan'),
-    ('China Aerospace Science and Technology Corp','CASC','CHN','GOVERNMENT',NULL,1999,'Beijing, China'),
-    ('Kongsberg Satellite Services','KSAT','NOR','COMMERCIAL','https://ksat.no',2002,'Tromsø, Norway'),
-    ('Lockheed Martin','LMT','USA','COMMERCIAL','https://lockheedmartin.com',1995,'Bethesda, MD'),
-    ('Northrop Grumman','NOC','USA','COMMERCIAL','https://northropgrumman.com',1994,'Falls Church, VA')
+    """INSERT INTO catalog.operator (name, short_name, country_code, operator_type, website, founded_year, headquarters, is_deleted) VALUES
+    ('National Aeronautics and Space Administration','NASA','USA','GOVERNMENT','https://nasa.gov',1958,'Washington, D.C.', FALSE),
+    ('SpaceX','SpaceX','USA','COMMERCIAL','https://spacex.com',2002,'Hawthorne, CA', FALSE),
+    ('European Space Agency','ESA','EUR','INTERGOVERNMENTAL','https://esa.int',1975,'Paris, France', FALSE),
+    ('Indian Space Research Organisation','ISRO','IND','GOVERNMENT','https://isro.gov.in',1969,'Bangalore, India', FALSE),
+    ('Roscosmos','Roscosmos','RUS','GOVERNMENT','https://roscosmos.ru',1992,'Moscow, Russia', FALSE),
+    ('Japan Aerospace Exploration Agency','JAXA','JPN','GOVERNMENT','https://jaxa.jp',2003,'Tokyo, Japan', FALSE),
+    ('China Aerospace Science and Technology Corp','CASC','CHN','GOVERNMENT',NULL,1999,'Beijing, China', FALSE),
+    ('Kongsberg Satellite Services','KSAT','NOR','COMMERCIAL','https://ksat.no',2002,'Tromsø, Norway', FALSE),
+    ('Lockheed Martin','LMT','USA','COMMERCIAL','https://lockheedmartin.com',1995,'Bethesda, MD', FALSE),
+    ('Northrop Grumman','NOC','USA','COMMERCIAL','https://northropgrumman.com',1994,'Falls Church, VA', FALSE)
     ON CONFLICT DO NOTHING""",
 
     # ── Launch Vehicles ──
-    """INSERT INTO catalog.launch_vehicle (name,family,variant,operator_id,country_code,num_stages,payload_leo_kg,payload_gto_kg,height_m,diameter_m,liftoff_mass_kg,status,maiden_flight) VALUES
-    ('Falcon 9 Block 5','Falcon','Block 5',2,'USA',2,22800,8300,70.00,3.70,549054,'ACTIVE','2018-05-11'),
-    ('Falcon Heavy','Falcon','Heavy',2,'USA',3,63800,26700,70.00,3.70,1420788,'ACTIVE','2018-02-06'),
-    ('PSLV-XL','PSLV','XL',4,'IND',4,1750,1425,44.40,2.80,320000,'ACTIVE','2008-04-28'),
-    ('Proton-M','Proton','M/Briz-M',5,'RUS',4,23000,6920,58.20,7.40,705000,'ACTIVE','2001-04-07'),
-    ('Ariane 5 ECA','Ariane','5 ECA',3,'EUR',2,21000,10500,52.00,5.40,777000,'RETIRED','2002-12-11'),
-    ('Soyuz-2.1b','Soyuz','2.1b',5,'RUS',3,8200,3250,46.30,2.95,312000,'ACTIVE','2006-12-27'),
-    ('Long March 5B','Long March','5B',7,'CHN',2,25000,NULL,53.66,5.00,849000,'ACTIVE','2020-05-05')
+    """INSERT INTO catalog.launch_vehicle (name,family,variant,operator_id,country_code,num_stages,payload_leo_kg,payload_gto_kg,height_m,diameter_m,liftoff_mass_kg,status,maiden_flight,is_deleted) VALUES
+    ('Falcon 9 Block 5','Falcon','Block 5',2,'USA',2,22800,8300,70.00,3.70,549054,'ACTIVE','2018-05-11', FALSE),
+    ('Falcon Heavy','Falcon','Heavy',2,'USA',3,63800,26700,70.00,3.70,1420788,'ACTIVE','2018-02-06', FALSE),
+    ('PSLV-XL','PSLV','XL',4,'IND',4,1750,1425,44.40,2.80,320000,'ACTIVE','2008-04-28', FALSE),
+    ('Proton-M','Proton','M/Briz-M',5,'RUS',4,23000,6920,58.20,7.40,705000,'ACTIVE','2001-04-07', FALSE),
+    ('Ariane 5 ECA','Ariane','5 ECA',3,'EUR',2,21000,10500,52.00,5.40,777000,'RETIRED','2002-12-11', FALSE),
+    ('Soyuz-2.1b','Soyuz','2.1b',5,'RUS',3,8200,3250,46.30,2.95,312000,'ACTIVE','2006-12-27', FALSE),
+    ('Long March 5B','Long March','5B',7,'CHN',2,25000,NULL,53.66,5.00,849000,'ACTIVE','2020-05-05', FALSE)
     ON CONFLICT DO NOTHING""",
 
     # ── Launch Events ──
@@ -41,22 +41,22 @@ SEED_STATEMENTS = [
     ON CONFLICT DO NOTHING""",
 
     # ── Space Objects ──
-    """INSERT INTO catalog.space_object (norad_id,cospar_id,name,object_type,operator_id,launch_id,launch_date,country_code,operator,orbit_class,status,mass_kg,purpose) VALUES
-    (25544,'1998-067A','ISS (ZARYA)','SATELLITE',1,1,'1998-11-20','ISS','NASA/Roscosmos/ESA/JAXA/CSA','LEO','ACTIVE',420000,'Space Station'),
-    (20580,'1990-037B','HST (HUBBLE)','SATELLITE',1,2,'1990-04-24','USA','NASA/ESA','LEO','ACTIVE',11110,'Astronomy'),
-    (48274,'2021-036V','STARLINK-2636','SATELLITE',2,3,'2021-04-29','USA','SpaceX','LEO','ACTIVE',260,'Communications'),
-    (48275,'2021-036W','STARLINK-2637','SATELLITE',2,3,'2021-04-29','USA','SpaceX','LEO','ACTIVE',260,'Communications'),
-    (43226,'2018-029A','SENTINEL-3B','SATELLITE',3,NULL,'2018-04-25','EUR','ESA/EUMETSAT','SSO','ACTIVE',1250,'Earth Observation'),
-    (49260,'2021-088A','JAMES WEBB SPACE TELESCOPE','SATELLITE',1,4,'2021-12-25','USA','NASA/ESA/CSA','HEO','ACTIVE',6161.4,'Astronomy'),
-    (55909,'2023-028A','CHANDRAYAAN-3 MODULE','SATELLITE',4,5,'2023-07-14','IND','ISRO','HEO','ACTIVE',3900,'Lunar Exploration'),
-    (27424,'2002-022A','AQUA','SATELLITE',1,NULL,'2002-05-04','USA','NASA','SSO','ACTIVE',2934,'Earth Science'),
-    (37348,'2011-002A','ELEKTRO-L 1','SATELLITE',5,NULL,'2011-01-20','RUS','Roscosmos','GEO','ACTIVE',1620,'Meteorology'),
-    (25994,'1999-025A','TERRA','SATELLITE',1,NULL,'1999-12-18','USA','NASA','SSO','ACTIVE',5190,'Earth Science'),
-    (13552,'1982-092C','COSMOS 1408 DEB','DEBRIS',NULL,NULL,NULL,'RUS',NULL,'LEO','INACTIVE',NULL,NULL),
-    (48078,'2021-016B','CZ-5B R/B','ROCKET_BODY',7,6,'2021-04-29','CHN','CASC','LEO','INACTIVE',21000,NULL),
-    (40258,'2014-055B','BREEZE-M DEB','DEBRIS',NULL,NULL,NULL,'RUS',NULL,'HEO','INACTIVE',NULL,NULL),
-    (26405,'2000-045B','TITAN 4B R/B','ROCKET_BODY',9,NULL,'2000-08-17','USA','Lockheed Martin','GEO','INACTIVE',3500,NULL),
-    (43772,'2018-092B','FENGYUN 1C DEB','DEBRIS',NULL,NULL,NULL,'CHN',NULL,'LEO','INACTIVE',NULL,NULL)
+    """INSERT INTO catalog.space_object (norad_id,cospar_id,name,object_type,operator_id,launch_id,launch_date,country_code,operator,orbit_class,status,mass_kg,purpose,is_deleted) VALUES
+    (25544,'1998-067A','ISS (ZARYA)','SATELLITE',1,1,'1998-11-20','ISS','NASA/Roscosmos/ESA/JAXA/CSA','LEO','ACTIVE',420000,'Space Station', FALSE),
+    (20580,'1990-037B','HST (HUBBLE)','SATELLITE',1,2,'1990-04-24','USA','NASA/ESA','LEO','ACTIVE',11110,'Astronomy', FALSE),
+    (48274,'2021-036V','STARLINK-2636','SATELLITE',2,3,'2021-04-29','USA','SpaceX','LEO','ACTIVE',260,'Communications', FALSE),
+    (48275,'2021-036W','STARLINK-2637','SATELLITE',2,3,'2021-04-29','USA','SpaceX','LEO','ACTIVE',260,'Communications', FALSE),
+    (43226,'2018-029A','SENTINEL-3B','SATELLITE',3,NULL,'2018-04-25','EUR','ESA/EUMETSAT','SSO','ACTIVE',1250,'Earth Observation', FALSE),
+    (49260,'2021-088A','JAMES WEBB SPACE TELESCOPE','SATELLITE',1,4,'2021-12-25','USA','NASA/ESA/CSA','HEO','ACTIVE',6161.4,'Astronomy', FALSE),
+    (55909,'2023-028A','CHANDRAYAAN-3 MODULE','SATELLITE',4,5,'2023-07-14','IND','ISRO','HEO','ACTIVE',3900,'Lunar Exploration', FALSE),
+    (27424,'2002-022A','AQUA','SATELLITE',1,NULL,'2002-05-04','USA','NASA','SSO','ACTIVE',2934,'Earth Science', FALSE),
+    (37348,'2011-002A','ELEKTRO-L 1','SATELLITE',5,NULL,'2011-01-20','RUS','Roscosmos','GEO','ACTIVE',1620,'Meteorology', FALSE),
+    (25994,'1999-025A','TERRA','SATELLITE',1,NULL,'1999-12-18','USA','NASA','SSO','ACTIVE',5190,'Earth Science', FALSE),
+    (13552,'1982-092C','COSMOS 1408 DEB','DEBRIS',NULL,NULL,NULL,'RUS',NULL,'LEO','INACTIVE',NULL,NULL, FALSE),
+    (48078,'2021-016B','CZ-5B R/B','ROCKET_BODY',7,6,'2021-04-29','CHN','CASC','LEO','INACTIVE',21000,NULL, FALSE),
+    (40258,'2014-055B','BREEZE-M DEB','DEBRIS',NULL,NULL,NULL,'RUS',NULL,'HEO','INACTIVE',NULL,NULL, FALSE),
+    (26405,'2000-045B','TITAN 4B R/B','ROCKET_BODY',9,NULL,'2000-08-17','USA','Lockheed Martin','GEO','INACTIVE',3500,NULL, FALSE),
+    (43772,'2018-092B','FENGYUN 1C DEB','DEBRIS',NULL,NULL,NULL,'CHN',NULL,'LEO','INACTIVE',NULL,NULL, FALSE)
     ON CONFLICT DO NOTHING""",
 
     # ── Orbit States ──
@@ -82,10 +82,10 @@ SEED_STATEMENTS = [
     ON CONFLICT DO NOTHING""",
 
     # ── Conjunction Events ──
-    """INSERT INTO analytics.conjunction_event (primary_object_id,secondary_object_id,time_of_closest_approach,miss_distance_km,collision_probability,relative_velocity_km_s,risk_level,status) VALUES
-    (1,11,'2026-02-11 14:23:00+00',0.85,2.3e-4,14.2,'HIGH','SCREENING'),
-    (3,12,'2026-02-13 08:15:00+00',3.20,5.1e-6,10.8,'MEDIUM','PENDING'),
-    (2,15,'2026-02-15 22:00:00+00',12.5,1.2e-7,7.5,'LOW','PENDING')
+    """INSERT INTO analytics.conjunction_event (primary_object_id,secondary_object_id,time_of_closest_approach,miss_distance_km,collision_probability,relative_velocity_km_s,risk_level,status,is_deleted) VALUES
+    (1,11,'2026-02-11 14:23:00+00',0.85,2.3e-4,14.2,'HIGH','SCREENING', FALSE),
+    (3,12,'2026-02-13 08:15:00+00',3.20,5.1e-6,10.8,'MEDIUM','PENDING', FALSE),
+    (2,15,'2026-02-15 22:00:00+00',12.5,1.2e-7,7.5,'LOW','PENDING', FALSE)
     ON CONFLICT DO NOTHING""",
 
     # ── Space Weather ──
@@ -96,15 +96,15 @@ SEED_STATEMENTS = [
     ON CONFLICT DO NOTHING""",
 
     # ── Missions ──
-    """INSERT INTO catalog.mission (name,description,operator_id,operator,launch_date,status) VALUES
-    ('ISS Operations','International Space Station continuous crewed operations',1,'NASA/Roscosmos/ESA/JAXA/CSA','1998-11-20','ACTIVE'),
-    ('Hubble Servicing','Hubble Space Telescope observation mission',1,'NASA/ESA','1990-04-24','ACTIVE'),
-    ('Starlink Gen2','SpaceX broadband constellation deployment',2,'SpaceX','2019-05-24','ACTIVE')
+    """INSERT INTO catalog.mission (name,description,operator_id,operator,launch_date,status,is_deleted) VALUES
+    ('ISS Operations','International Space Station continuous crewed operations',1,'NASA/Roscosmos/ESA/JAXA/CSA','1998-11-20','ACTIVE', FALSE),
+    ('Hubble Servicing','Hubble Space Telescope observation mission',1,'NASA/ESA','1990-04-24','ACTIVE', FALSE),
+    ('Starlink Gen2','SpaceX broadband constellation deployment',2,'SpaceX','2019-05-24','ACTIVE', FALSE)
     ON CONFLICT DO NOTHING""",
 
     # ── Maneuver Log ──
     """INSERT INTO analytics.maneuver_log (object_id,conjunction_id,planned_time,delta_v_m_s,direction,status,notes) VALUES
-    (1,1,'2026-02-11 10:00:00+00',0.5,'{"radial":0.0,"in_track":0.5,"cross_track":0.0}','PLANNED','Pre-emptive avoidance maneuver for ISS-Cosmos 1408 debris conjunction')
+    (1,1,'2026-02-11 10:00:00+00',0.5,'{"radial"\:0.0,"in_track"\:0.5,"cross_track"\:0.0}','PLANNED','Pre-emptive avoidance maneuver for ISS-Cosmos 1408 debris conjunction')
     ON CONFLICT DO NOTHING""",
 
     # ── Breakup Events ──
@@ -120,18 +120,18 @@ SEED_STATEMENTS = [
     ON CONFLICT DO NOTHING""",
 
     # ── Anomaly Alerts ──
-    """INSERT INTO ml.anomaly_alert (object_id,detected_at,subsystem,anomaly_type,severity,anomaly_score,threshold_used,model_version,description,window_start,window_end) VALUES
-    (1,'2026-02-08 23:45:00+00','EPS','POWER_DROP','WARNING',0.87,0.65,'lstm-v1.2','Solar array voltage showing 3% deviation','2026-02-08 22:00:00+00','2026-02-08 23:45:00+00'),
-    (2,'2026-02-09 01:00:00+00','THERMAL','THERMAL_EXCURSION','INFO',0.45,0.65,'lstm-v1.2','Minor instrument bay temperature fluctuation','2026-02-09 00:30:00+00','2026-02-09 01:00:00+00'),
-    (3,'2026-02-08 18:00:00+00','ADCS','ATTITUDE_ERROR','CRITICAL',1.92,0.65,'lstm-v1.2','Starlink-2636 attitude control error exceeds 3-sigma','2026-02-08 17:00:00+00','2026-02-08 18:00:00+00')
+    """INSERT INTO ml.anomaly_alert (object_id,detected_at,subsystem,anomaly_type,severity,anomaly_score,threshold_used,model_version,description,window_start,window_end,is_acknowledged) VALUES
+    (1,'2026-02-08 23:45:00+00','EPS','POWER_DROP','WARNING',0.87,0.65,'lstm-v1.2','Solar array voltage showing 3% deviation','2026-02-08 22:00:00+00','2026-02-08 23:45:00+00', FALSE),
+    (2,'2026-02-09 01:00:00+00','THERMAL','THERMAL_EXCURSION','INFO',0.45,0.65,'lstm-v1.2','Minor instrument bay temperature fluctuation','2026-02-09 00:30:00+00','2026-02-09 01:00:00+00', FALSE),
+    (3,'2026-02-08 18:00:00+00','ADCS','ATTITUDE_ERROR','CRITICAL',1.92,0.65,'lstm-v1.2','Starlink-2636 attitude control error exceeds 3-sigma','2026-02-08 17:00:00+00','2026-02-08 18:00:00+00', FALSE)
     ON CONFLICT DO NOTHING""",
 
     # ── Debris Classifications ──
     """INSERT INTO ml.debris_classification (object_id,predicted_type,confidence,model_version,features_used,classified_at) VALUES
-    (11,'DEBRIS',0.94,'rf-v2.1','{"semi_major_axis_km":6858,"eccentricity":0.005}','2026-02-09 00:00:00+00'),
-    (13,'DEBRIS',0.88,'rf-v2.1','{"semi_major_axis_km":25000,"eccentricity":0.7}','2026-02-09 00:00:00+00'),
-    (12,'ROCKET_BODY',0.97,'rf-v2.1','{"semi_major_axis_km":6800,"eccentricity":0.001}','2026-02-09 00:00:00+00'),
-    (15,'DEBRIS',0.91,'rf-v2.1','{"semi_major_axis_km":7200,"eccentricity":0.003}','2026-02-09 00:00:00+00')
+    (11,'DEBRIS',0.94,'rf-v2.1','{"semi_major_axis_km"\:6858,"eccentricity"\:0.005}','2026-02-09 00:00:00+00'),
+    (13,'DEBRIS',0.88,'rf-v2.1','{"semi_major_axis_km"\:25000,"eccentricity"\:0.7}','2026-02-09 00:00:00+00'),
+    (12,'ROCKET_BODY',0.97,'rf-v2.1','{"semi_major_axis_km"\:6800,"eccentricity"\:0.001}','2026-02-09 00:00:00+00'),
+    (15,'DEBRIS',0.91,'rf-v2.1','{"semi_major_axis_km"\:7200,"eccentricity"\:0.003}','2026-02-09 00:00:00+00')
     ON CONFLICT DO NOTHING""",
 
     # ── Congestion Reports ──
@@ -142,27 +142,27 @@ SEED_STATEMENTS = [
     ON CONFLICT DO NOTHING""",
 
     # ── ATSAD Benchmark Datasets ──
-    """INSERT INTO ml.benchmark_dataset (name,description,task_type,domain,num_channels,num_data_points,num_anomalies,anomaly_ratio,source) VALUES
-    ('ATSAD-SMAP-Uni','Soil Moisture Active Passive satellite - univariate','UNIVARIATE','SPACECRAFT',1,12000,340,0.028,'ATSADBench'),
-    ('ATSAD-MSL-Uni','Mars Science Laboratory rover - univariate','UNIVARIATE','SPACECRAFT',1,8640,210,0.024,'ATSADBench'),
-    ('ATSAD-SMAP-Multi','SMAP satellite - multivariate (25 channels)','MULTIVARIATE','SPACECRAFT',25,12000,340,0.028,'ATSADBench'),
-    ('ATSAD-MSL-Multi','MSL rover - multivariate (55 channels)','MULTIVARIATE','SPACECRAFT',55,8640,210,0.024,'ATSADBench'),
-    ('ATSAD-Power-Uni','Spacecraft power subsystem - univariate voltage','UNIVARIATE','SPACECRAFT',1,6000,150,0.025,'ATSADBench'),
-    ('ATSAD-Thermal-Multi','Satellite thermal subsystem - multivariate','MULTIVARIATE','SPACECRAFT',12,9600,280,0.029,'ATSADBench'),
-    ('ATSAD-ADCS-Multi','Attitude Determination & Control - multivariate','MULTIVARIATE','SPACECRAFT',9,7200,180,0.025,'ATSADBench'),
-    ('ATSAD-Comm-Uni','Communication subsystem - univariate signal','UNIVARIATE','SPACECRAFT',1,5400,120,0.022,'ATSADBench'),
-    ('ATSAD-Synthetic-Simple','Synthetic benchmark - simple periodic signals','UNIVARIATE','SIMULATED',1,10000,500,0.050,'ATSADBench')
+    """INSERT INTO ml.benchmark_dataset (name,description,task_type,domain,num_channels,num_data_points,num_anomalies,anomaly_ratio,source,is_deleted) VALUES
+    ('ATSAD-SMAP-Uni','Soil Moisture Active Passive satellite - univariate','UNIVARIATE','SPACECRAFT',1,12000,340,0.028,'ATSADBench', FALSE),
+    ('ATSAD-MSL-Uni','Mars Science Laboratory rover - univariate','UNIVARIATE','SPACECRAFT',1,8640,210,0.024,'ATSADBench', FALSE),
+    ('ATSAD-SMAP-Multi','SMAP satellite - multivariate (25 channels)','MULTIVARIATE','SPACECRAFT',25,12000,340,0.028,'ATSADBench', FALSE),
+    ('ATSAD-MSL-Multi','MSL rover - multivariate (55 channels)','MULTIVARIATE','SPACECRAFT',55,8640,210,0.024,'ATSADBench', FALSE),
+    ('ATSAD-Power-Uni','Spacecraft power subsystem - univariate voltage','UNIVARIATE','SPACECRAFT',1,6000,150,0.025,'ATSADBench', FALSE),
+    ('ATSAD-Thermal-Multi','Satellite thermal subsystem - multivariate','MULTIVARIATE','SPACECRAFT',12,9600,280,0.029,'ATSADBench', FALSE),
+    ('ATSAD-ADCS-Multi','Attitude Determination & Control - multivariate','MULTIVARIATE','SPACECRAFT',9,7200,180,0.025,'ATSADBench', FALSE),
+    ('ATSAD-Comm-Uni','Communication subsystem - univariate signal','UNIVARIATE','SPACECRAFT',1,5400,120,0.022,'ATSADBench', FALSE),
+    ('ATSAD-Synthetic-Simple','Synthetic benchmark - simple periodic signals','UNIVARIATE','SIMULATED',1,10000,500,0.050,'ATSADBench', FALSE)
     ON CONFLICT (name) DO NOTHING""",
 
     # ── ATSAD Benchmark Models ──
     """INSERT INTO ml.benchmark_model (name,model_type,architecture,version,description,context_strategy,is_baseline,hyperparameters) VALUES
-    ('GPT-4o Zero-Shot','LLM','GPT-4o','v2024-08','OpenAI GPT-4o with zero-shot prompt','ZERO_SHOT',TRUE,'{"temperature":0.0,"max_tokens":512}'),
-    ('GPT-4o Few-Shot','LLM','GPT-4o','v2024-08','GPT-4o with 5-shot examples','FEW_SHOT',TRUE,'{"temperature":0.0,"num_shots":5}'),
-    ('LLaMA-3 70B Zero-Shot','LLM','LLaMA-3-70B','v3.0','Meta LLaMA-3 70B zero-shot','ZERO_SHOT',TRUE,'{"temperature":0.0}'),
-    ('Isolation Forest','STATISTICAL','IsolationForest','v1.0','Scikit-learn Isolation Forest baseline',NULL,TRUE,'{"n_estimators":200}'),
-    ('LSTM Autoencoder','DEEP_LEARNING','LSTM-AE','v1.0','LSTM autoencoder with reconstruction-error','ZERO_SHOT',TRUE,'{"hidden_size":64,"num_layers":2}'),
-    ('Transformer AD','DEEP_LEARNING','TransformerEncoder','v1.0','Transformer encoder for multivariate AD',NULL,FALSE,'{"d_model":128,"nhead":8}'),
-    ('ORBITA Hybrid v1','HYBRID','LLM+StatisticalEnsemble','v0.1','Novel ORBITA method: LLM + statistical ensemble','FEW_SHOT',FALSE,'{"llm_model":"GPT-4o"}')
+    ('GPT-4o Zero-Shot','LLM','GPT-4o','v2024-08','OpenAI GPT-4o with zero-shot prompt','ZERO_SHOT',TRUE,'{"temperature"\:0.0,"max_tokens"\:512}'),
+    ('GPT-4o Few-Shot','LLM','GPT-4o','v2024-08','GPT-4o with 5-shot examples','FEW_SHOT',TRUE,'{"temperature"\:0.0,"num_shots"\:5}'),
+    ('LLaMA-3 70B Zero-Shot','LLM','LLaMA-3-70B','v3.0','Meta LLaMA-3 70B zero-shot','ZERO_SHOT',TRUE,'{"temperature"\:0.0}'),
+    ('Isolation Forest','STATISTICAL','IsolationForest','v1.0','Scikit-learn Isolation Forest baseline',NULL,TRUE,'{"n_estimators"\:200}'),
+    ('LSTM Autoencoder','DEEP_LEARNING','LSTM-AE','v1.0','LSTM autoencoder with reconstruction-error','ZERO_SHOT',TRUE,'{"hidden_size"\:64,"num_layers"\:2}'),
+    ('Transformer AD','DEEP_LEARNING','TransformerEncoder','v1.0','Transformer encoder for multivariate AD',NULL,FALSE,'{"d_model"\:128,"nhead"\:8}'),
+    ('ORBITA Hybrid v1','HYBRID','LLM+StatisticalEnsemble','v0.1','Novel ORBITA method: LLM + statistical ensemble','FEW_SHOT',FALSE,'{"llm_model"\:"GPT-4o"}')
     ON CONFLICT DO NOTHING""",
 ]
 
