@@ -83,6 +83,15 @@ async def lifespan(app: FastAPI):
         print(f"  [WARNING] Bootstrap failed: {exc}")
         import traceback
         traceback.print_exc()
+
+    # Seed catalog/tracking/analytics/ml data (idempotent)
+    try:
+        from app.core.seed import run_seed
+        async with async_session() as session:
+            await run_seed(session)
+    except Exception as exc:
+        print(f"  [WARNING] Seed failed: {exc}")
+
     yield
     # ── shutdown ──
     print("  ORBITA-ATSAD shutting down")
