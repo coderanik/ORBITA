@@ -36,7 +36,7 @@ export default function Dashboard() {
   const timeController = useTimeController()
 
   // Phase 2: WebSocket connection for real-time streaming
-  const { lastMessage } = useWebSocket(token)
+  const { lastMessage } = useWebSocket(token ?? undefined)
 
   const loadData = useCallback(async () => {
     try {
