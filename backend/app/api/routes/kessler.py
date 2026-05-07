@@ -47,15 +47,27 @@ async def get_simulation_status(task_id: str, current_user: dict = Depends(get_c
     """
     Polls the status of a running Kessler simulation.
     """
-    result = AsyncResult(task_id)
-    
-    if result.state == 'PENDING':
+    from fastapi import HTTPException
+
+    if not task_id or task_id in ("undefined", "null", ""):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    try:
+        result = AsyncResult(task_id)
+        state = result.state
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Cannot query task status (broker unavailable): {exc}",
+        )
+
+    if state == 'PENDING':
         return {"task_id": task_id, "status": "PENDING"}
-    elif result.state == 'PROGRESS':
+    elif state == 'PROGRESS':
         return {"task_id": task_id, "status": "PROGRESS", "meta": result.info}
-    elif result.state == 'SUCCESS':
+    elif state == 'SUCCESS':
         return {"task_id": task_id, "status": "SUCCESS", "result": result.result}
-    elif result.state == 'FAILURE':
+    elif state == 'FAILURE':
         return {"task_id": task_id, "status": "FAILURE", "error": str(result.result)}
     else:
-        return {"task_id": task_id, "status": result.state}
+        return {"task_id": task_id, "status": state}
