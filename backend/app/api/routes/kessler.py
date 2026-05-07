@@ -23,16 +23,23 @@ async def start_simulation(req: KesslerSimulateRequest):
     """
     Starts a Kessler Syndrome simulation. Returns a task ID to poll for results.
     """
-    task = run_kessler_simulation.delay(
-        target_norad_id=req.target_norad_id,
-        impactor_norad_id=req.impactor_norad_id,
-        target_mass_kg=req.target_mass_kg,
-        impactor_mass_kg=req.impactor_mass_kg,
-        collision_r_km=req.collision_r_km,
-        collision_v_km_s=req.collision_v_km_s,
-        relative_v_km_s=req.relative_velocity_km_s,
-    )
-    return {"task_id": task.id, "status": "QUEUED"}
+    try:
+        task = run_kessler_simulation.delay(
+            target_norad_id=req.target_norad_id,
+            impactor_norad_id=req.impactor_norad_id,
+            target_mass_kg=req.target_mass_kg,
+            impactor_mass_kg=req.impactor_mass_kg,
+            collision_r_km=req.collision_r_km,
+            collision_v_km_s=req.collision_v_km_s,
+            relative_v_km_s=req.relative_velocity_km_s,
+        )
+        return {"task_id": task.id, "status": "QUEUED"}
+    except Exception as exc:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=503, 
+            detail=f"Failed to enqueue simulation task. Check if Redis/Celery is running. Error: {str(exc)}"
+        )
 
 @router.get("/simulations/{task_id}")
 async def get_simulation_status(task_id: str):
