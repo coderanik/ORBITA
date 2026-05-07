@@ -32,8 +32,19 @@ export default function KesslerSimulator() {
         method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
         body: JSON.stringify({ target_norad_id:targetId, impactor_norad_id:impactorId, target_mass_kg:targetMass, impactor_mass_kg:impactorMass, relative_velocity_km_s:relVelocity }),
       })
-      const d = await res.json(); poll(d.task_id)
-    } catch { setError('Failed to start'); setIsRunning(false) }
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.detail || 'Failed to start simulation')
+      }
+      const d = await res.json()
+      if (!d.task_id) {
+        throw new Error('No task_id returned from server')
+      }
+      poll(d.task_id)
+    } catch (err) { 
+      setError(err instanceof Error ? err.message : 'Failed to start'); 
+      setIsRunning(false) 
+    }
   }
 
   const poll = (id:string) => {

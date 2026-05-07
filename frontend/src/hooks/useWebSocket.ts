@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-const WS_BASE = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000/api/v1/ws'
+function getWSBase(token?: string): string {
+  const envUrl = import.meta.env.VITE_WS_BASE_URL
+  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
+  
+  let wsBase = envUrl || apiBase.replace(/^http/, 'ws').replace(/\/api\/v1$/, '/api/v1/ws')
+  
+  if (token && !wsBase.includes('?')) {
+    wsBase += `?token=${encodeURIComponent(token)}`
+  }
+  return wsBase
+}
 
 export interface WSMessage {
   type: string
@@ -8,7 +18,7 @@ export interface WSMessage {
   ts: string
 }
 
-export function useWebSocket() {
+export function useWebSocket(token?: string) {
   const [isConnected, setIsConnected] = useState(false)
   const [lastMessage, setLastMessage] = useState<WSMessage | null>(null)
   const [messageLog, setMessageLog] = useState<WSMessage[]>([])
@@ -24,6 +34,7 @@ export function useWebSocket() {
       wsRef.current?.readyState === WebSocket.CONNECTING
     ) return
 
+    const WS_BASE = getWSBase(token)
     const ws = new WebSocket(WS_BASE)
 
     ws.onopen = () => {
@@ -44,7 +55,7 @@ export function useWebSocket() {
           return
         }
         setLastMessage(msg)
-        setMessageLog(prev => [...prev.slice(-99), msg]) // Keep last 100
+        setMessageLog(prev => [...prev.slice(-99), msg])
       } catch {
         console.warn('[WS] Could not parse message:', event.data)
       }
@@ -59,7 +70,7 @@ export function useWebSocket() {
       console.warn(
         `[WS] Disconnected (code=${event.code}, reason="${event.reason || 'none'}", clean=${event.wasClean}).`
       )
-      if (shouldReconnectRef.current) {
+      if (shouldReconnectRef.current && event.code !== 1008) {
         console.log('[WS] Reconnecting in 5s...')
         reconnectTimerRef.current = setTimeout(() => connect(), 5000)
       }
@@ -71,7 +82,7 @@ export function useWebSocket() {
     }
 
     wsRef.current = ws
-  }, [])
+  }, [token])
 
   const disconnect = useCallback(() => {
     shouldReconnectRef.current = false
