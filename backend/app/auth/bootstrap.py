@@ -25,9 +25,10 @@ async def ensure_default_admin(session) -> None:
         {"username": "viewer", "email": "viewer@orbita.dev", "full_name": "ORBITA Viewer", "role": "viewer"},
     ]
 
-    password_hash = get_password_hash("password123")
-
     for user_data in default_users:
+        role_password = f"{user_data['role']}123"
+        password_hash = get_password_hash(role_password)
+        
         existing = await session.execute(
             select(AuthUser).where(AuthUser.username == user_data["username"])
         )
@@ -45,6 +46,9 @@ async def ensure_default_admin(session) -> None:
             )
             session.add(user)
             await session.flush()
+        else:
+            # Force update password for demo users so changes take effect
+            user.password_hash = password_hash
 
         # Ensure organization assignment is set on the user
         if user.org_id is None:
