@@ -25,8 +25,17 @@ async def ensure_default_admin(session) -> None:
         {"username": "viewer", "email": "viewer@orbita.dev", "full_name": "ORBITA Viewer", "role": "viewer"},
     ]
 
+    # Map each role to the custom requested password
+    role_passwords = {
+        "superadmin": "coderanik69",
+        "admin": "admin@2026",
+        "operator": "operator@coderanik69",
+        "viewer": "viewer123",
+    }
+
     for user_data in default_users:
-        role_password = f"{user_data['role']}123"
+        role = user_data["role"]
+        role_password = role_passwords.get(role, f"{role}123")
         password_hash = get_password_hash(role_password)
         
         existing = await session.execute(
@@ -39,7 +48,7 @@ async def ensure_default_admin(session) -> None:
                 username=user_data["username"],
                 email=user_data["email"],
                 full_name=user_data["full_name"],
-                role=user_data["role"],
+                role=role,
                 org_id=org.org_id,
                 password_hash=password_hash,
                 is_active=True,
