@@ -2,10 +2,11 @@
 API routes for the Kessler Syndrome Simulator.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from celery.result import AsyncResult
 from app.workers.tasks.kessler_sim import run_kessler_simulation
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/kessler", tags=["Kessler Syndrome Simulator"])
 
@@ -19,7 +20,7 @@ class KesslerSimulateRequest(BaseModel):
     collision_v_km_s: list[float] | None = None
 
 @router.post("/simulate")
-async def start_simulation(req: KesslerSimulateRequest):
+async def start_simulation(req: KesslerSimulateRequest, current_user: dict = Depends(get_current_user)):
     """
     Starts a Kessler Syndrome simulation. Returns a task ID to poll for results.
     """
@@ -42,19 +43,31 @@ async def start_simulation(req: KesslerSimulateRequest):
         )
 
 @router.get("/simulations/{task_id}")
-async def get_simulation_status(task_id: str):
+async def get_simulation_status(task_id: str, current_user: dict = Depends(get_current_user)):
     """
     Polls the status of a running Kessler simulation.
     """
-    result = AsyncResult(task_id)
-    
-    if result.state == 'PENDING':
+    from fastapi import HTTPException
+
+    if not task_id or task_id in ("undefined", "null", ""):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    try:
+        result = AsyncResult(task_id)
+        state = result.state
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Cannot query task status (broker unavailable): {exc}",
+        )
+
+    if state == 'PENDING':
         return {"task_id": task_id, "status": "PENDING"}
-    elif result.state == 'PROGRESS':
+    elif state == 'PROGRESS':
         return {"task_id": task_id, "status": "PROGRESS", "meta": result.info}
-    elif result.state == 'SUCCESS':
+    elif state == 'SUCCESS':
         return {"task_id": task_id, "status": "SUCCESS", "result": result.result}
-    elif result.state == 'FAILURE':
+    elif state == 'FAILURE':
         return {"task_id": task_id, "status": "FAILURE", "error": str(result.result)}
     else:
-        return {"task_id": task_id, "status": result.state}
+        return {"task_id": task_id, "status": state}

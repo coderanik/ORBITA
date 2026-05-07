@@ -12,7 +12,7 @@ import { WifiOff, RefreshCw } from 'lucide-react'
 
 
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const navigate = useNavigate()
   const [globeMode, setGlobeMode] = useState<'3d' | '2d'>('3d')
   const [showOrbits, setShowOrbits] = useState(false)
@@ -36,7 +36,7 @@ export default function Dashboard() {
   const timeController = useTimeController()
 
   // Phase 2: WebSocket connection for real-time streaming
-  const { lastMessage } = useWebSocket()
+  const { lastMessage } = useWebSocket(token ?? undefined)
 
   const loadData = useCallback(async () => {
     try {
