@@ -57,20 +57,18 @@ async def _celery_worker_status() -> dict:
 
 async def _redis_status() -> dict:
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    client = redis.from_url(redis_url, decode_responses=True)
     try:
-        pong = await client.ping()
-        info = await client.info(section="memory")
-        db_size = await client.dbsize()
-        return {
-            "ok": bool(pong),
-            "db_size": int(db_size),
-            "used_memory_human": info.get("used_memory_human"),
-        }
+        async with redis.from_url(redis_url, decode_responses=True) as client:
+            pong = await client.ping()
+            info = await client.info(section="memory")
+            db_size = await client.dbsize()
+            return {
+                "ok": bool(pong),
+                "db_size": int(db_size),
+                "used_memory_human": info.get("used_memory_human"),
+            }
     except Exception as exc:
         return {"ok": False, "error": str(exc), "db_size": None, "used_memory_human": None}
-    finally:
-        await client.aclose()
 
 
 async def _rabbitmq_status() -> dict:
