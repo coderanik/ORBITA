@@ -1,4 +1,4 @@
-# ORBITA-ATSAD
+# ORBITA
 
 **An Integrated Platform for Benchmarking and Operational Deployment of LLM-Based Anomaly Detection in Spacecraft Telemetry**
 
