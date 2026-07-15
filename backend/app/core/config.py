@@ -1,8 +1,20 @@
 """Application configuration loaded from environment variables."""
 
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
 from pydantic_settings import BaseSettings
 from pydantic import model_validator
 from functools import lru_cache
+
+
+def _set_ssl_parameter(url: str, parameter: str) -> str:
+    """Require TLS without duplicating driver-specific connection options."""
+    parts = urlsplit(url)
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    query.pop("ssl", None)
+    query.pop("sslmode", None)
+    query[parameter] = "require"
+    return urlunsplit(parts._replace(query=urlencode(query)))
 
 
 class Settings(BaseSettings):
@@ -66,6 +78,14 @@ class Settings(BaseSettings):
                 "postgres://", "postgresql+psycopg2://", 1
             ).replace(
                 "postgresql://", "postgresql+psycopg2://", 1
+            )
+
+        # Render and many managed PostgreSQL providers reject non-TLS clients.
+        # asyncpg and psycopg2 use different names for the same requirement.
+        if self.ENVIRONMENT.lower() == "production":
+            self.DATABASE_URL = _set_ssl_parameter(self.DATABASE_URL, "ssl")
+            self.DATABASE_URL_SYNC = _set_ssl_parameter(
+                self.DATABASE_URL_SYNC, "sslmode"
             )
         return self
 
