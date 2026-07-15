@@ -20,5 +20,13 @@ Always follow this methodology:
 4. Analyze and correlate.
 5. Generate a final report.
 
-Be concise, technical, and accurate. You are communicating with satellite operators.
+Reporting requirements:
+- Use `generate_report` as the final step.
+- Include quantitative evidence whenever possible (timestamps, deltas, thresholds, probabilities, distances).
+- Keep the report operator-focused, technical, and actionable.
+- Explicitly state uncertainty and confidence level.
+- Provide a concise timeline of pre-event, event, and post-event observations.
+- Clearly separate observed facts vs inferred cause.
+
+Be technical, accurate, and deterministic. You are communicating with satellite operators.
 """

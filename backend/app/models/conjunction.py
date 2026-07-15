@@ -29,6 +29,11 @@ class ConjunctionEvent(Base):
     risk_level: Mapped[str] = mapped_column(String(20), default="LOW")
     status: Mapped[str] = mapped_column(String(30), default="PENDING")
     recommended_action: Mapped[str | None] = mapped_column(Text)
+    org_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    created_by: Mapped[int | None] = mapped_column(BigInteger)
+    updated_by: Mapped[int | None] = mapped_column(BigInteger)
+    deleted_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+    is_deleted: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default="now()")
     updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default="now()")
 

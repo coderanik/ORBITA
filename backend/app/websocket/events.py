@@ -20,3 +20,7 @@ class WSEvent:
     
     # Space Weather
     SPACE_WEATHER_ALERT = "SPACE_WEATHER_ALERT"
+
+    # Connection lifecycle
+    HEARTBEAT = "HEARTBEAT"
+    PONG = "PONG"

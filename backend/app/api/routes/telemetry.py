@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.telemetry import SatelliteTelemetry
 from app.schemas.telemetry import TelemetryCreate, TelemetryBatchCreate, TelemetryRead
+from app.workers.tasks.telemetry_ingest import process_telemetry_batch
 
 router = APIRouter(prefix="/telemetry", tags=["Telemetry"])
 
@@ -59,10 +60,21 @@ async def create_telemetry(
 @router.post("/batch", status_code=201)
 async def create_telemetry_batch(
     payload: TelemetryBatchCreate,
+    async_ingest: bool = Query(True, description="Queue background ML ingestion pipeline"),
     db: AsyncSession = Depends(get_db),
 ):
     """Batch-ingest telemetry data points."""
+    if async_ingest:
+        try:
+            task = process_telemetry_batch.delay(
+                [item.model_dump(exclude_unset=True, mode="json") for item in payload.items]
+            )
+            return {"ingested": len(payload.items), "queued": True, "task_id": task.id}
+        except Exception:
+            # Fall through to direct DB ingestion if queueing fails.
+            pass
+
     records = [SatelliteTelemetry(**item.model_dump(exclude_unset=True)) for item in payload.items]
     db.add_all(records)
     await db.flush()
-    return {"ingested": len(records)}
+    return {"ingested": len(records), "queued": False}

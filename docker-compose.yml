@@ -67,6 +67,8 @@ services:
       dockerfile: Dockerfile
     container_name: orbita-worker
     command: celery -A app.workers.celery_app worker -l info -c 4
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://orbita_admin:orbita_secret_2026@orbita-db:5432/orbita_registry
       DATABASE_URL_SYNC: postgresql+psycopg2://orbita_admin:orbita_secret_2026@orbita-db:5432/orbita_registry
@@ -94,6 +96,8 @@ services:
       dockerfile: Dockerfile
     container_name: orbita-beat
     command: celery -A app.workers.celery_app beat -l info
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://orbita_admin:orbita_secret_2026@orbita-db:5432/orbita_registry
       DATABASE_URL_SYNC: postgresql+psycopg2://orbita_admin:orbita_secret_2026@orbita-db:5432/orbita_registry
@@ -133,6 +137,8 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://orbita_admin:orbita_secret_2026@orbita-db:5432/orbita_registry
       DATABASE_URL_SYNC: postgresql+psycopg2://orbita_admin:orbita_secret_2026@orbita-db:5432/orbita_registry

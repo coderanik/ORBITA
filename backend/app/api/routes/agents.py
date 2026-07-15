@@ -10,7 +10,7 @@ router = APIRouter(prefix="/agents", tags=["Autonomous Agents"])
 
 class InvestigateRequest(BaseModel):
     alert_id: int
-    provider: str = "openai"  # or "anthropic"
+    provider: str = "gemini"  # gemini | deepseek | huggingface
 
 class InvestigateResponse(BaseModel):
     report: str

@@ -1,10 +1,15 @@
 import os
 from typing import Optional, Dict, Any
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
+
 from app.models.telemetry import SatelliteTelemetry
 from app.models.anomaly_alert import AnomalyAlert
 from app.models.space_weather import SpaceWeather
+from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
+
 
 class AnomalyExplainer:
     """Service to explain anomalies using LLMs and domain context."""
@@ -13,6 +18,92 @@ class AnomalyExplainer:
         self.db = db
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.provider = provider
+
+    def _build_fallback_explanation(self, alert: AnomalyAlert, context: Dict[str, Any]) -> str:
+        explanation = (
+            f"### Anomaly Diagnosis: {alert.anomaly_type} in {alert.subsystem}\n\n"
+            f"**Observation:** Anomaly detected at {alert.detected_at.strftime('%Y-%m-%d %H:%M:%S UTC')}. "
+            f"The anomaly score reached {alert.anomaly_score:.4f}, exceeding the threshold of {alert.threshold_used}.\n\n"
+            f"**Contextual Analysis:**\n"
+            f"- **Telemetry Signals:** Analysis of {context['telemetry_count']} data points in the {alert.subsystem} subsystem "
+            f"shows atypical fluctuations around expected operating bands.\n"
+        )
+
+        if context["space_weather"]:
+            sw = context["space_weather"]
+            explanation += (
+                f"- **Environmental Factors:** Current Space Weather indicates an F10.7 solar flux of {sw['f107']} "
+                f"and a Kp-index of {sw['kp_index']}. "
+            )
+            if sw["kp_index"] != "N/A" and float(sw["kp_index"]) > 4:
+                explanation += (
+                    "Elevated geomagnetic activity (Kp > 4) may contribute to charging effects or SEE events.\n"
+                )
+            else:
+                explanation += (
+                    "Geomagnetic conditions appear nominal, suggesting internal component drift or a software-side issue.\n"
+                )
+
+        explanation += (
+            f"\n**Recommended Action:**\n"
+            f"1. Initiate secondary telemetry sweep for {alert.subsystem}.\n"
+            f"2. Verify redundant system status for the affected component.\n"
+            f"3. Acknowledge alert and monitor recurrence over the next orbital pass."
+        )
+        return explanation
+
+    async def _generate_llm_explanation(self, alert: AnomalyAlert, context: Dict[str, Any]) -> str:
+        provider = self.provider.lower()
+        model = None
+        if provider == "anthropic":
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if api_key:
+                model = ChatAnthropic(
+                    model_name="claude-3-5-sonnet-20240620",
+                    api_key=api_key,
+                    temperature=0.1,
+                )
+        else:
+            api_key = self.api_key or os.getenv("OPENAI_API_KEY")
+            if api_key:
+                model = ChatOpenAI(model="gpt-4o-mini", api_key=api_key, temperature=0.1)
+
+        if model is None:
+            return self._build_fallback_explanation(alert, context)
+
+        prompt = f"""
+You are a spacecraft operations anomaly analyst.
+Write a concise mission-ops explanation for this anomaly.
+
+Alert:
+- object_id: {alert.object_id}
+- subsystem: {alert.subsystem}
+- anomaly_type: {alert.anomaly_type}
+- severity: {alert.severity}
+- anomaly_score: {alert.anomaly_score}
+- threshold_used: {alert.threshold_used}
+- detected_at: {alert.detected_at.isoformat() if alert.detected_at else "N/A"}
+
+Context:
+- telemetry_count: {context["telemetry_count"]}
+- telemetry_sample: {context["telemetry_sample"]}
+- space_weather: {context["space_weather"]}
+
+Return markdown with:
+1) Observation
+2) Probable causes
+3) Confidence level
+4) Recommended actions
+"""
+        response = await model.ainvoke(prompt)
+        content = getattr(response, "content", None)
+        if isinstance(content, str) and content.strip():
+            return content.strip()
+        if isinstance(content, list):
+            joined = " ".join(str(chunk) for chunk in content).strip()
+            if joined:
+                return joined
+        return self._build_fallback_explanation(alert, context)
 
     async def get_context_data(self, alert: AnomalyAlert) -> Dict[str, Any]:
         """Gather telemetry and space weather context for the anomaly window."""
@@ -56,36 +147,4 @@ class AnomalyExplainer:
             return "Anomaly alert not found."
             
         context = await self.get_context_data(alert)
-        
-        # In a real scenario, we'd call OpenAI/Anthropic here.
-        # For the demo, we'll provide a high-quality "mock" LLM response 
-        # that incorporates the gathered context.
-        
-        explanation = (
-            f"### Anomaly Diagnosis: {alert.anomaly_type} in {alert.subsystem}\n\n"
-            f"**Observation:** Anomaly detected at {alert.detected_at.strftime('%Y-%m-%d %H:%M:%S UTC')}. "
-            f"The anomaly score reached {alert.anomaly_score:.4f}, exceeding the threshold of {alert.threshold_used}.\n\n"
-            f"**Contextual Analysis:**\n"
-            f"- **Telemetry Signals:** Analysis of {context['telemetry_count']} data points in the {alert.subsystem} subsystem "
-            f"shows atypical fluctuations in power-bus voltage and thermal regulation parameters.\n"
-        )
-        
-        if context['space_weather']:
-            sw = context['space_weather']
-            explanation += (
-                f"- **Environmental Factors:** Current Space Weather indicates an F10.7 solar flux of {sw['f107']} "
-                f"and a Kp-index of {sw['kp_index']}. "
-            )
-            if sw['kp_index'] != "N/A" and float(sw['kp_index']) > 4:
-                explanation += "The elevated geomagnetic activity (Kp > 4) is a likely contributing factor to surface charging or single-event effects (SEE).\n"
-            else:
-                explanation += "Geomagnetic conditions appear nominal, suggesting an internal component degradation or software glitch.\n"
-        
-        explanation += (
-            f"\n**Recommended Action:**\n"
-            f"1. Initiate secondary telemetry sweep for {alert.subsystem}.\n"
-            f"2. Verify redundant system status for the affected component.\n"
-            f"3. Acknowledge alert and monitor for recurrence during the next orbital pass."
-        )
-        
-        return explanation
+        return await self._generate_llm_explanation(alert, context)

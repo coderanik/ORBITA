@@ -20,6 +20,11 @@ class Mission(Base):
     end_date: Mapped[date | None] = mapped_column(Date)
     status: Mapped[str] = mapped_column(String(50), default="PLANNED")
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, default={})
+    org_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    created_by: Mapped[int | None] = mapped_column(BigInteger)
+    updated_by: Mapped[int | None] = mapped_column(BigInteger)
+    deleted_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+    is_deleted: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default="now()")
     updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default="now()")
 

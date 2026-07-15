@@ -1,0 +1,46 @@
+services:
+  # Main FastAPI Backend Service
+  - type: web
+    name: orbita-api
+    runtime: docker
+    plan: free
+    dockerContext: backend
+    dockerfilePath: backend/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: orbita-db
+          property: connectionString
+      - key: DATABASE_URL_SYNC
+        fromDatabase:
+          name: orbita-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: orbita-redis
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GOOGLE_API_KEY
+        sync: false
+
+  # Redis-compatible broker and result backend for Celery
+  - type: keyvalue
+    name: orbita-redis
+    plan: free
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+databases:
+  # PostgreSQL with PostGIS
+  - name: orbita-db
+    databaseName: orbita_registry
+    user: orbita_admin
+    plan: free # Upgrade for persistent production data beyond the free trial
+    ipAllowList: [] # Allows all by default, restrict in production

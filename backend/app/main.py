@@ -12,6 +12,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
+from app.core.database import async_session
+from app.auth.bootstrap import ensure_default_admin
 from app.api.routes import (
     space_objects,
     orbits,
@@ -46,6 +48,7 @@ from app.api.routes import (
     websockets,
     agents,
     kessler,
+    system_ops,
 )
 
 settings = get_settings()
@@ -57,6 +60,38 @@ async def lifespan(app: FastAPI):
     # ── startup ──
     print(f"  ORBITA-ATSAD v{settings.APP_VERSION} starting ({settings.ENVIRONMENT})")
     print(f"  Database: {settings.DATABASE_URL[:50]}...")
+
+    # Ensure all PostgreSQL schemas and tables exist (safe for fresh databases)
+    from app.core.database import get_async_engine, Base
+    import app.models  # noqa: F401 — register all models with Base.metadata
+    from sqlalchemy import text
+
+    engine = get_async_engine()
+    async with engine.begin() as conn:
+        # Create schemas first (CREATE SCHEMA IF NOT EXISTS is idempotent)
+        for schema in ("auth", "catalog", "tracking", "telemetry", "analytics", "ml"):
+            await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+        # Create all tables from SQLAlchemy models (checkfirst=True by default)
+        await conn.run_sync(Base.metadata.create_all)
+        print("  Database schemas and tables verified/created")
+
+    try:
+        async with async_session() as session:
+            await ensure_default_admin(session)
+        print("  Default admin bootstrap completed successfully")
+    except Exception as exc:
+        print(f"  [WARNING] Bootstrap failed: {exc}")
+        import traceback
+        traceback.print_exc()
+
+    # Seed catalog/tracking/analytics/ml data (idempotent)
+    try:
+        from app.core.seed import run_seed
+        async with async_session() as session:
+            await run_seed(session)
+    except Exception as exc:
+        print(f"  [WARNING] Seed failed: {exc}")
+
     yield
     # ── shutdown ──
     print("  ORBITA-ATSAD shutting down")
@@ -74,7 +109,7 @@ app = FastAPI(
 # ── CORS ──────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -130,6 +165,9 @@ app.include_router(agents.router,            prefix=API_V1)
 
 # Kessler Syndrome Simulator
 app.include_router(kessler.router,           prefix=API_V1)
+
+# System operations
+app.include_router(system_ops.router,        prefix=API_V1)
 
 # TLE Positions
 app.include_router(tle.router,               prefix=API_V1)

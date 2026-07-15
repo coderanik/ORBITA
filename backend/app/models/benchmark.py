@@ -40,6 +40,11 @@ class BenchmarkDataset(Base):
     source: Mapped[str | None] = mapped_column(String(200))  # ATSADBench, custom, etc.
     file_path: Mapped[str | None] = mapped_column(String(500))
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, default={})
+    org_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    created_by: Mapped[int | None] = mapped_column(BigInteger)
+    updated_by: Mapped[int | None] = mapped_column(BigInteger)
+    deleted_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default="now()")
 
     runs = relationship("BenchmarkRun", back_populates="dataset", lazy="noload")
@@ -62,6 +67,11 @@ class BenchmarkModel(Base):
     prompt_template: Mapped[str | None] = mapped_column(Text)  # For LLM-based models
     context_strategy: Mapped[str | None] = mapped_column(String(30))  # ZERO_SHOT, FEW_SHOT, RAG, FINE_TUNED
     is_baseline: Mapped[bool] = mapped_column(Boolean, default=False)
+    org_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    created_by: Mapped[int | None] = mapped_column(BigInteger)
+    updated_by: Mapped[int | None] = mapped_column(BigInteger)
+    deleted_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default="now()")
     updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default="now()")
 
@@ -85,6 +95,11 @@ class BenchmarkRun(Base):
     duration_seconds: Mapped[float | None] = mapped_column(Float)
     config: Mapped[dict | None] = mapped_column(JSONB, default={})  # Run-specific configuration overrides
     notes: Mapped[str | None] = mapped_column(Text)
+    org_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    created_by: Mapped[int | None] = mapped_column(BigInteger)
+    updated_by: Mapped[int | None] = mapped_column(BigInteger)
+    deleted_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default="now()")
 
     dataset = relationship("BenchmarkDataset", back_populates="runs")

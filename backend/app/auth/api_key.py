@@ -2,8 +2,10 @@
 API Key authentication support.
 """
 
-import hashlib
 import secrets
+
+from app.auth.security import hash_api_key
+
 
 def generate_api_key() -> tuple[str, str]:
     """
@@ -11,9 +13,4 @@ def generate_api_key() -> tuple[str, str]:
     The raw key is shown to the user once; only the hash is stored.
     """
     raw_key = f"orbita_{secrets.token_urlsafe(32)}"
-    hashed = hashlib.sha256(raw_key.encode()).hexdigest()
-    return raw_key, hashed
-
-def hash_api_key(raw_key: str) -> str:
-    """Hash an API key for lookup."""
-    return hashlib.sha256(raw_key.encode()).hexdigest()
+    return raw_key, hash_api_key(raw_key)

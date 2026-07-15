@@ -133,7 +133,7 @@ export default function GlobeViewOptimized({
   const critCount = criticalIds.size
 
   return (
-    <div className="flex-1 bg-black relative">
+    <div className="h-full w-full bg-black relative">
       <Viewer
         ref={viewerRef}
         full

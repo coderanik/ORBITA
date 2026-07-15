@@ -23,6 +23,21 @@ class GroundStationCreate(GroundStationBase):
     pass
 
 
+class GroundStationUpdate(BaseModel):
+    name: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    altitude_m: float | None = None
+    country_code: str | None = None
+    operator: str | None = None
+    station_type: str | None = None
+    frequency_bands: list | None = None
+    antenna_diameter_m: float | None = None
+    min_elevation_deg: float | None = None
+    capabilities: dict | None = None
+    is_active: bool | None = None
+
+
 class GroundStationRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -33,10 +33,10 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -71,10 +71,10 @@ jobs:
           ENVIRONMENT: test
         run: |
           cd backend
-          python -m pytest tests/ -v --tb=short --cov=app --cov-report=xml || echo "No tests yet"
+          python -m pytest tests/ -v --tb=short --cov=app --cov-report=xml
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./backend/coverage.xml
@@ -85,10 +85,10 @@ jobs:
   test-frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: 'npm'
@@ -103,6 +103,11 @@ jobs:
         run: |
           cd frontend
           npm run lint
+
+      - name: Frontend tests
+        run: |
+          cd frontend
+          npm run test
 
       - name: Audit dependencies
         run: |
@@ -123,10 +128,12 @@ jobs:
   infra-validation:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate Docker Compose
-        run: docker compose config -q
+        run: |
+          touch backend/.env
+          docker compose config -q
 
       - name: Validate K8s Manifests
         run: |
@@ -143,10 +150,10 @@ jobs:
 
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build API image
         run: docker build -t orbita-api:${{ github.sha }} ./backend
