@@ -51,7 +51,7 @@ nltk==3.9.4
 python-dateutil==2.9.0.post0
 orjson==3.11.6
 ujson==5.12.1
-filelock==3.29.0
+filelock==3.30.0
 werkzeug==3.1.8
 pillow==12.2.0
 matplotlib==3.10.0
