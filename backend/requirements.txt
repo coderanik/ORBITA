@@ -22,7 +22,7 @@ redis==5.2.1
 
 # ── Orbit Propagation ────────────────────────────────────────
 skyfield==1.49
-sgp4==2.23
+sgp4==2.27
 numpy==2.2.1
 scipy==1.15.1
 astropy==6.1.7
