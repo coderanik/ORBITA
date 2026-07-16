@@ -27,7 +27,7 @@ numpy==2.2.1
 scipy==1.15.1
 astropy==6.1.7
 nrlmsise00==0.1.2
-jplephem==2.22
+jplephem==2.24
 
 # ── HTTP Client (for external data sources) ──────────────────
 httpx==0.28.1
